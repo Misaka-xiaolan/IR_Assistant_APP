@@ -6,7 +6,6 @@ set(Easylogger_Include_DIR
 )
 
 set(Easylogger_Src
-        ${CMAKE_CURRENT_SOURCE_DIR}/port/elog_port.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/elog.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/elog_async.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/elog_buf.c

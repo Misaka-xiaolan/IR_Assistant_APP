@@ -29,6 +29,11 @@
 #include <elog.h>
 #include "stdio.h"
 #include "SEGGER_RTT.h"
+#include "FreeRTOS.h"
+#include "semphr.h"
+#include "main.h"
+
+static SemaphoreHandle_t semphore_mutex = NULL;
 /**
  * EasyLogger port initialize
  *
@@ -36,6 +41,10 @@
  */
 ElogErrCode elog_port_init(void) {
     ElogErrCode result = ELOG_NO_ERR;
+    semphore_mutex = xSemaphoreCreateMutex();
+    if (semphore_mutex == NULL)
+        return 1;
+    xSemaphoreGive(semphore_mutex);
 	// SEGGER_RTT_Init();
     /* add your code here */
     
@@ -61,7 +70,9 @@ void elog_port_output(const char *log, size_t size) {
 void elog_port_output_lock(void) {
     
     /* add your code here */
-    
+    // 暂时有问题，先不用
+    // if (!semphore_mutex) return;
+    // xSemaphoreTake(semphore_mutex, 10);
 }
 
 /**
@@ -70,7 +81,9 @@ void elog_port_output_lock(void) {
 void elog_port_output_unlock(void) {
     
     /* add your code here */
-    
+    // 暂时有问题，先不用
+    // if (!semphore_mutex) return;
+    // xSemaphoreGive(semphore_mutex);
 }
 
 /**
@@ -92,7 +105,7 @@ const char *elog_port_get_time(void) {
 const char *elog_port_get_p_info(void) {
     
     /* add your code here */
-    
+    UNUSED(NULL);
 }
 
 /**
@@ -103,5 +116,5 @@ const char *elog_port_get_p_info(void) {
 const char *elog_port_get_t_info(void) {
     
     /* add your code here */
-    
+    return  pcTaskGetTaskName(NULL);
 }

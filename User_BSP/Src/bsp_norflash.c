@@ -65,7 +65,7 @@ void Norflash_Init(void)
         }
     }
 
-    elog_debug(TAG, "Norflash ID:%X\r\n", g_norflash_type); /* 打印FLASH ID,测试用 */
+    // elog_debug(TAG, "Norflash ID:%X\r\n", g_norflash_type); /* 打印FLASH ID,测试用 */
 }
 
 /**

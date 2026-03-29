@@ -1,6 +1,7 @@
 # 忽略所有名为 build 的文件夹（无论在哪个层级）
 build/
 Build/
+cmake-build-debug-stm32/
 
 # 忽略 CMake 产生的中间文件
 cmake-build-*/
