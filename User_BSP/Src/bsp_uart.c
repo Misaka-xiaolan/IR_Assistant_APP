@@ -391,7 +391,7 @@ static void UART_PerInstance_Task(void* params)
                     }
                     else
                     {
-                        elog_verbose(TAG, "No RX callback registered, dropping %d bytes", read_len);
+                        elog_info(TAG, "No RX callback registered, dropping %d bytes", read_len);
                     }
                 }
             }
