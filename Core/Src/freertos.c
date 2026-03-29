@@ -29,12 +29,14 @@
 #include "bsp_dht20.h"
 #include "bsp_buzzer.h"
 #include "bsp_ir.h"
+#include "bsp_uart.h"
 #include "i2c.h"
 #include "tim.h"
 #include "lvgl.h"
 #include "lv_port_indev.h"
 #include "lv_port_lcd_stm32.h"
 #include "lv_port_other.h"
+#include "usart.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -58,6 +60,8 @@ Key_Handle key_handle;
 DHT20_Handle dht20_handle;
 Buzzer_Handle buzzer_handle;
 IR_Handle ir_handle;
+UART_Handle uart_lte_handle;
+UART_Handle uart_debug_handle;
 extern DMA_HandleTypeDef hdma_tim2_ch3_up;
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
@@ -73,7 +77,7 @@ const osThreadAttr_t defaultTask_attributes = {
 osThreadId_t lvglTaskHandle;
 const osThreadAttr_t lvglTask_attributes = {
   .name = "lvglTask",
-  .stack_size = 5120,
+  .stack_size = 3072,
   .priority = (osPriority_t) 4,
 };
 void lvgl_main_task(void *pvParameters);
@@ -129,6 +133,14 @@ void MX_FREERTOS_Init(void) {
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
+  UART_config_t uart_config =
+  {
+    .uart_handle = &huart2
+  };
+  uart_debug_handle = UART_DMA_Init(&uart_config);
+  uart_config.uart_handle = &huart1;
+  uart_lte_handle = UART_DMA_Init(&uart_config);
+
   key_config_t key_config =
   {
     .i2c_handle = &hi2c1,
