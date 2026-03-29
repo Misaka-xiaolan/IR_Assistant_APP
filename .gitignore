@@ -1,0 +1,36 @@
+# 忽略所有名为 build 的文件夹（无论在哪个层级）
+build/
+Build/
+
+# 忽略 CMake 产生的中间文件
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+CMakeScripts/
+cmake_install.cmake
+Makefile
+
+# 忽略编译生成的二进制结果
+*.elf
+*.bin
+*.hex
+*.map
+*.list
+
+# CLion 自动生成的 IDE 配置文件夹
+.idea/
+.cmake/
+
+# 编译产生的静态库（比如你编译出来的 liblvgl.a）
+*.a
+*.lib
+
+# 调试产生的日志和临时文件
+*.log
+*.su
+*.o
+*.obj
+*.d
+
+# 如果你有外部数据手册或临时 PDF，也可以忽略
+*.pdf

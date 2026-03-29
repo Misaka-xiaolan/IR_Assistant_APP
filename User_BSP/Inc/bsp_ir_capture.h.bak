@@ -1,0 +1,44 @@
+//
+// Created by skinm on 2026/3/20.
+//
+
+#ifndef IR_ASSISTANT_TEST_BSP_IR_CAPTURE_H
+#define IR_ASSISTANT_TEST_BSP_IR_CAPTURE_H
+
+#include "main.h"
+
+// 红外捕获配置结构体
+typedef struct
+{
+    TIM_HandleTypeDef* tim_handle; // 定时器句柄（必须）
+    uint32_t tim_channel; // 输入捕获定时器通道
+    GPIO_TypeDef* gpio_port; // GPIO 端口（如 GPIOB）
+    uint16_t gpio_pin; // GPIO 引脚（如 GPIO_PIN_9）
+    uint32_t timeout_ms; // 帧间超时（ms）
+    uint8_t queue_depth; // 订阅者队列深度
+} ir_config_t;
+
+// 红外事件结构体
+typedef struct
+{
+    uint8_t data[256]; // 最大帧长度 256 字节
+    uint32_t len; // 实际数据长度
+    int32_t error; // 0: OK, <0: 错误码
+} ir_frame_event_t;
+
+// 不透明设备句柄
+typedef struct IR_device_t* IR_Handle;
+
+// API
+IR_Handle IR_Init(ir_config_t* config); // 初始化
+void IR_Enable(IR_Handle handle); // 启用红外接收
+void IR_Disable(IR_Handle handle); // 停止红外接收
+QueueHandle_t IR_Event_Subscribe(IR_Handle handle); // 订阅事件
+void IR_Event_Unsubscribe(IR_Handle handle, QueueHandle_t queue); // 取消订阅
+TIM_HandleTypeDef* IR_Get_TIM_Handle(IR_Handle handle);
+
+// 中断回调
+void IR_Capture_IC_ISR_Callback(IR_Handle handle);
+void IR_Capture_Update_ISR_Callback(IR_Handle handle);
+
+#endif //IR_ASSISTANT_TEST_BSP_IR_CAPTURE_H

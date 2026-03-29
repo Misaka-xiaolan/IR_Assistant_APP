@@ -1,0 +1,206 @@
+//
+// Created by skinm on 2026/3/20.
+//
+
+#include "bsp_ir_capture.c.h"
+
+#define TAG "ir_capture"
+#define MAX_SUBSCRIBERS 5
+#define IR_CAPTURE_MAX_LEN 256
+
+/* 内部设备结构体 */
+struct IR_device_t
+{
+    ir_config_t config;
+    volatile uint8_t state; // 0: IDLE, 1: RECEIVING
+    uint8_t captured_edge; // 0: falling, 1: rising
+    uint8_t sequence[IR_CAPTURE_MAX_LEN];
+    uint32_t cnt;
+    uint32_t timeout_cnt;
+
+    // 状态统计
+    uint8_t initialized;
+    uint8_t enabled; // 1: 启用, 0: 禁用
+};
+
+static void ir_reset(IR_Handle handle)
+{
+    handle->state = 0;
+    handle->captured_edge = 0;
+    handle->cnt = 0;
+    handle->timeout_cnt = 0;
+    __HAL_TIM_DISABLE_IT(handle->config.tim_handle, TIM_IT_UPDATE);
+}
+
+
+IR_Handle IR_Init(ir_config_t* config)
+{
+    if (!config || !config->tim_handle || !config->gpio_port)
+    {
+        elog_error(TAG, "Invalid config: tim_handle, tim_channel or gpio_port missing");
+        return NULL;
+    }
+
+    // 创建设备实例
+    IR_Handle handle = (IR_Handle)pvPortMalloc(sizeof(struct IR_device_t));
+    if (!handle)
+    {
+        elog_error(TAG, "Memory allocation failed");
+        return NULL;
+    }
+    memset(handle, 0, sizeof(struct IR_device_t));
+
+    // 保存配置
+    memcpy(&handle->config, config, sizeof(ir_config_t));
+
+    // 设置默认值
+    if (handle->config.timeout_ms == 0)
+    {
+        handle->config.timeout_ms = 500; // 默认 100ms 超时
+    }
+    if (handle->config.queue_depth == 0)
+    {
+        handle->config.queue_depth = 3; // 默认队列深度 3
+    }
+
+    // 初始化硬件状态
+    handle->enabled = 1; // 默认启用
+    ir_reset(handle);
+
+    // 启动捕获中断
+    // HAL_TIM_IC_Start_IT(handle->config.tim_handle, TIM_CHANNEL_1);
+
+    handle->initialized = 1;
+    elog_info(TAG, "IR initialized");
+    return handle;
+}
+
+void IR_Enable(IR_Handle handle)
+{
+    if (!handle || !handle->initialized) return;
+
+    handle->enabled = 1;
+    ir_reset(handle); // 重置接收状态
+    if (HAL_TIM_IC_Start_IT(handle->config.tim_handle, handle->config.tim_channel) == HAL_OK)
+    {
+        elog_info(TAG, "IR capture start");
+    }
+    else
+    {
+        elog_error(TAG, "IR capture start FAIL");
+    }
+}
+
+void IR_Disable(IR_Handle handle)
+{
+    if (!handle || !handle->initialized) return;
+    if (!handle->enabled) return;
+
+    handle->enabled = 0;
+    if (HAL_TIM_IC_Stop_IT(handle->config.tim_handle, handle->config.tim_channel) == HAL_OK)
+    {
+        elog_info(TAG, "IR capture stop");
+    }
+    else
+    {
+        elog_error(TAG, "IR capture stop FAIL");
+    }
+    ir_reset(handle);
+}
+
+void IR_Capture_IC_ISR_Callback(IR_Handle handle)
+{
+    if (!handle || !handle->initialized || !handle->enabled) return;
+
+    TIM_HandleTypeDef* htim = handle->config.tim_handle;
+    uint16_t dval = 0;
+    GPIO_PinState pin_state = HAL_GPIO_ReadPin(handle->config.gpio_port, handle->config.gpio_pin);
+
+    if (pin_state == GPIO_PIN_SET)
+    {
+        // 上升沿：准备捕获下降沿
+        __HAL_TIM_SET_CAPTUREPOLARITY(htim, handle->config.tim_channel, TIM_INPUTCHANNELPOLARITY_FALLING);
+        __HAL_TIM_SET_COUNTER(htim, 0);
+        handle->captured_edge = 1;
+    }
+    else
+    {
+        // 下降沿：处理脉宽
+        dval = HAL_TIM_ReadCapturedValue(htim, handle->config.tim_channel);
+        __HAL_TIM_SET_CAPTUREPOLARITY(htim, handle->config.tim_channel, TIM_INPUTCHANNELPOLARITY_RISING);
+
+        if (handle->captured_edge == 1)
+        {
+            if (handle->state == 1)
+            {
+                // 接收中
+                if (dval > 300 && dval < 800)
+                {
+                    if (handle->cnt < IR_CAPTURE_MAX_LEN)
+                        handle->sequence[handle->cnt++] = 0;
+                }
+                else if (dval > 1400 && dval < 1800)
+                {
+                    if (handle->cnt < IR_CAPTURE_MAX_LEN)
+                        handle->sequence[handle->cnt++] = 1;
+                }
+                handle->timeout_cnt = 0;
+
+                if (handle->cnt >= IR_CAPTURE_MAX_LEN)
+                {
+                    ir_reset(handle);
+                    
+                    return;
+
+                }
+            }
+            else if (handle->state == 0)
+            {
+                // 空闲状态
+                if (dval > 4200 && dval < 4700)
+                {
+                    handle->state = 1; // 开始接收
+                    handle->cnt = 0;
+                    handle->timeout_cnt = 0;
+                    __HAL_TIM_ENABLE_IT(htim, TIM_IT_UPDATE);
+                }
+            }
+        }
+        handle->captured_edge = 0;
+
+            // 空闲状态
+
+    }
+}
+
+void IR_Capture_Update_ISR_Callback(IR_Handle handle)
+{
+    if (!handle || !handle->initialized || !handle->enabled || handle->state != 1)
+        return;
+
+    handle->timeout_cnt++;
+    uint32_t timeout_ticks = pdMS_TO_TICKS(handle->config.timeout_ms) / 10;
+
+    if (handle->timeout_cnt > timeout_ticks)
+    {
+        __HAL_TIM_DISABLE_IT(handle->config.tim_handle, TIM_IT_UPDATE);
+        if (handle->cnt > 0)
+        {
+            // ir_notify_subscribers(handle, 0);  // 成功接收
+            elog_info(TAG, "IR signal capture success, len = %d", handle->cnt);
+        }
+        else
+        {
+            // handle->timeout_count++;
+            // ir_notify_subscribers(handle, -2);  // 超时
+        }
+        ir_reset(handle);
+    }
+}
+
+TIM_HandleTypeDef* IR_Get_TIM_Handle(IR_Handle handle)
+{
+    if (!handle || !handle->initialized)
+        return NULL;
+    return handle->config.tim_handle;
+}
