@@ -9,6 +9,7 @@
 
 #ifdef __cplusplus
 extern "C" {
+
 #endif
 
 /**
@@ -43,86 +44,94 @@ extern "C" {
 /**
  * @brief 系统信息结构 (64字节)
  */
-typedef struct {
-    uint32_t magic;                 /* 魔数 0x49524153 ("IRAS") */
-    uint16_t version;               /* 版本号 */
-    uint16_t remote_count;          /* 遥控器数量 */
-    uint32_t total_keys;            /* 总按键数 */
-    uint32_t checksum;              /* CRC32校验 */
-    uint8_t  reserved[48];          /* 预留空间 */
+typedef struct
+{
+    uint32_t magic; /* 魔数 0x49524153 ("IRAS") */
+    uint16_t version; /* 版本号 */
+    uint16_t remote_count; /* 遥控器数量 */
+    uint32_t total_keys; /* 总按键数 */
+    uint32_t checksum; /* CRC32校验 */
+    uint8_t reserved[48]; /* 预留空间 */
 } system_info_t;
 
 /**
  * @brief 遥控器索引结构 (64字节)
  */
-typedef struct {
-    uint16_t id;                    /* 遥控器ID (0-9) */
-    uint16_t key_count;             /* 按键数量 */
-    char     name[STORAGE_REMOTE_NAME_LEN];  /* 遥控器名称 */
-    uint32_t data_offset;           /* 数据区域偏移 (扇区号) */
-    uint32_t checksum;              /* CRC32校验 */
-    uint8_t  reserved[20];          /* 预留空间 */
+typedef struct
+{
+    uint16_t id; /* 遥控器ID (0-9) */
+    uint16_t key_count; /* 按键数量 */
+    char name[STORAGE_REMOTE_NAME_LEN]; /* 遥控器名称 */
+    uint32_t data_offset; /* 数据区域偏移 (扇区号) */
+    uint32_t checksum; /* CRC32校验 */
+    uint8_t reserved[20]; /* 预留空间 */
 } remote_index_t;
 
 /**
  * @brief 按键数据结构 (4160字节)
  */
-typedef struct {
-    uint16_t id;                    /* 按键ID */
-    char     name[STORAGE_KEY_NAME_LEN];  /* 按键名称 */
-    uint32_t data_len;              /* 红外数据长度 (uint32_t个数) */
-    uint32_t checksum;              /* CRC32校验 */
-    uint32_t data[STORAGE_MAX_KEY_DATA_LEN];  /* 红外数据 (最大4KB) */
+typedef struct
+{
+    uint16_t id; /* 按键ID */
+    char name[STORAGE_KEY_NAME_LEN]; /* 按键名称 */
+    uint32_t data_len; /* 红外数据长度 (uint32_t个数) */
+    uint32_t checksum; /* CRC32校验 */
+    uint32_t data[STORAGE_MAX_KEY_DATA_LEN]; /* 红外数据 (最大4KB) */
 } key_data_t;
 
 /**
  * @brief 遥控器信息结构（用于API返回）
  */
-typedef struct {
+typedef struct
+{
     uint16_t id;
-    char     name[STORAGE_REMOTE_NAME_LEN];
+    char name[STORAGE_REMOTE_NAME_LEN];
     uint16_t key_count;
 } remote_info_t;
 
 /**
  * @brief 按键信息结构（用于API返回）
  */
-typedef struct {
+typedef struct
+{
     uint16_t id;
-    char     name[STORAGE_KEY_NAME_LEN];
+    char name[STORAGE_KEY_NAME_LEN];
     uint32_t data_len;
 } key_info_t;
 
 /**
  * @brief 存储消息类型（用于LVGL通信）
  */
-typedef enum {
-    STORAGE_MSG_ADD_REMOTE,         /* 添加遥控器 */
-    STORAGE_MSG_DELETE_REMOTE,      /* 删除遥控器 */
-    STORAGE_MSG_ADD_KEY,            /* 添加按键 */
-    STORAGE_MSG_DELETE_KEY,         /* 删除按键 */
-    STORAGE_MSG_UPDATE_KEY,         /* 更新按键数据 */
-    STORAGE_MSG_GET_LIST,           /* 获取列表 */
+typedef enum
+{
+    STORAGE_MSG_ADD_REMOTE, /* 添加遥控器 */
+    STORAGE_MSG_DELETE_REMOTE, /* 删除遥控器 */
+    STORAGE_MSG_ADD_KEY, /* 添加按键 */
+    STORAGE_MSG_DELETE_KEY, /* 删除按键 */
+    STORAGE_MSG_UPDATE_KEY, /* 更新按键数据 */
+    STORAGE_MSG_GET_LIST, /* 获取列表 */
     STORAGE_MSG_OPERATION_COMPLETE, /* 操作完成 */
-    STORAGE_MSG_ERROR               /* 错误 */
+    STORAGE_MSG_ERROR /* 错误 */
 } storage_msg_type_t;
 
 /**
  * @brief 存储消息结构（用于LVGL通信）
  */
-typedef struct {
-    storage_msg_type_t type;        /* 消息类型 */
-    uint32_t remote_id;             /* 遥控器ID */
-    uint32_t key_id;                /* 按键ID */
-    void*    data;                  /* 数据指针 */
-    uint32_t data_len;              /* 数据长度 */
-    int32_t  result;                /* 操作结果 */
+typedef struct
+{
+    storage_msg_type_t type; /* 消息类型 */
+    uint32_t remote_id; /* 遥控器ID */
+    uint32_t key_id; /* 按键ID */
+    void* data; /* 数据指针 */
+    uint32_t data_len; /* 数据长度 */
+    int32_t result; /* 操作结果 */
 } storage_msg_t;
 
 /**
  * @brief 存储操作结果
  */
-typedef enum {
+typedef enum
+{
     STORAGE_OK = 0,
     STORAGE_ERROR,
     STORAGE_ERROR_INVALID_PARAM,
@@ -137,11 +146,12 @@ typedef enum {
 /**
  * @brief 存储管理句柄
  */
-typedef struct {
-    SemaphoreHandle_t mutex;        /* 互斥锁 */
-    QueueHandle_t msg_queue;        /* LVGL消息队列 */
-    system_info_t   sys_info;       /* 系统信息缓存 */
-    remote_index_t  index_table[STORAGE_MAX_REMOTES]; /* 索引表缓存 */
+typedef struct
+{
+    SemaphoreHandle_t mutex; /* 互斥锁 */
+    QueueHandle_t msg_queue; /* LVGL消息队列 */
+    system_info_t sys_info; /* 系统信息缓存 */
+    remote_index_t index_table[STORAGE_MAX_REMOTES]; /* 索引表缓存 */
 } storage_handle_t;
 
 /**
@@ -182,7 +192,7 @@ storage_status_t Storage_DeleteRemote(storage_handle_t* handle, uint16_t remote_
  * @param[out] count 实际遥控器数量
  * @return 操作结果
  */
-storage_status_t Storage_GetRemoteList(storage_handle_t* handle, remote_info_t* list, 
+storage_status_t Storage_GetRemoteList(storage_handle_t* handle, remote_info_t* list,
                                        uint16_t max_count, uint16_t* count);
 
 /**
@@ -192,7 +202,7 @@ storage_status_t Storage_GetRemoteList(storage_handle_t* handle, remote_info_t* 
  * @param[out] info 遥控器信息
  * @return 操作结果
  */
-storage_status_t Storage_GetRemoteInfo(storage_handle_t* handle, uint16_t remote_id, 
+storage_status_t Storage_GetRemoteInfo(storage_handle_t* handle, uint16_t remote_id,
                                        remote_info_t* info);
 
 /**
@@ -205,7 +215,7 @@ storage_status_t Storage_GetRemoteInfo(storage_handle_t* handle, uint16_t remote
  * @param[out] key_id 返回的按键ID
  * @return 操作结果
  */
-storage_status_t Storage_AddKey(storage_handle_t* handle, uint16_t remote_id, 
+storage_status_t Storage_AddKey(storage_handle_t* handle, uint16_t remote_id,
                                 const char* name, const uint32_t* data, uint32_t len,
                                 uint16_t* key_id);
 
@@ -216,7 +226,7 @@ storage_status_t Storage_AddKey(storage_handle_t* handle, uint16_t remote_id,
  * @param key_id 按键ID
  * @return 操作结果
  */
-storage_status_t Storage_DeleteKey(storage_handle_t* handle, uint16_t remote_id, 
+storage_status_t Storage_DeleteKey(storage_handle_t* handle, uint16_t remote_id,
                                    uint16_t key_id);
 
 /**
@@ -227,7 +237,7 @@ storage_status_t Storage_DeleteKey(storage_handle_t* handle, uint16_t remote_id,
  * @param[out] key_data 按键数据
  * @return 操作结果
  */
-storage_status_t Storage_GetKeyData(storage_handle_t* handle, uint16_t remote_id, 
+storage_status_t Storage_GetKeyData(storage_handle_t* handle, uint16_t remote_id,
                                     uint16_t key_id, key_data_t* key_data);
 
 /**
@@ -239,7 +249,7 @@ storage_status_t Storage_GetKeyData(storage_handle_t* handle, uint16_t remote_id
  * @param len 数据长度（uint32_t个数）
  * @return 操作结果
  */
-storage_status_t Storage_UpdateKey(storage_handle_t* handle, uint16_t remote_id, 
+storage_status_t Storage_UpdateKey(storage_handle_t* handle, uint16_t remote_id,
                                    uint16_t key_id, const uint32_t* data, uint32_t len);
 
 /**

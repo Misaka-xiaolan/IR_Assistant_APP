@@ -78,11 +78,12 @@ uint32_t CRC32_Init(void)
 uint32_t CRC32_Calculate(const void* data, size_t length, uint32_t crc)
 {
     const uint8_t* p = (const uint8_t*)data;
-    
-    for (size_t i = 0; i < length; i++) {
+
+    for (size_t i = 0; i < length; i++)
+    {
         crc = crc32_table[(crc ^ p[i]) & 0xFF] ^ (crc >> 8);
     }
-    
+
     return crc;
 }
 
