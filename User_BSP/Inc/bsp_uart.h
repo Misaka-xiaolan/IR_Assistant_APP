@@ -56,6 +56,23 @@ uint16_t UART_Send_Data(UART_Handle dev, const uint8_t* data, uint16_t len);
  */
 uint16_t UART_Get_TxBuffer_FreeSize(UART_Handle dev);
 
+/**
+ * @brief 启动两个串口的双向透传（桥接）
+ * @note 此操作会覆盖两个串口原有的接收回调
+ * @param uart_a 串口A句柄
+ * @param uart_b 串口B句柄
+ * @return 0:成功 -1:失败
+ */
+int UART_Start_Bridge(UART_Handle uart_a, UART_Handle uart_b);
+
+/**
+ * @brief 停止串口桥接
+ * @param uart_a 串口A句柄
+ * @param uart_b 串口B句柄
+ * @return 0:成功 -1:失败
+ */
+int UART_Stop_Bridge(UART_Handle uart_a, UART_Handle uart_b);
+
 #ifdef __cplusplus
 }
 #endif

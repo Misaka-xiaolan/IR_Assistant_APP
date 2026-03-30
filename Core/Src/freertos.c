@@ -209,7 +209,7 @@ void StartDefaultTask(void *argument)
   QueueHandle_t ir_queue = IR_Event_Subscribe(ir_handle);
   key_event_t key_event;
   ir_event_t ir_event = {0};
-  IR_Receive_Start(ir_handle);
+  // IR_Receive_Start(ir_handle);
   /* Infinite loop */
   for(;;)
   {
@@ -239,6 +239,25 @@ void StartDefaultTask(void *argument)
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
+static void btn_event_handler(lv_event_t* e)
+{
+  static uint8_t flag = 0;
+  lv_event_code_t code = lv_event_get_code(e);
+  if (code == LV_EVENT_CLICKED)
+  {
+    if (flag == 0)
+    {
+      UART_Start_Bridge(uart_debug_handle, uart_lte_handle);
+    }
+    else
+    {
+      UART_Stop_Bridge(uart_debug_handle, uart_lte_handle);
+    }
+    flag = !flag;
+    // 在此处添加你的业务逻辑，如跳转页面、开关功能等
+  }
+}
+
 void lvgl_main_task(void *pvParameters)
 {
   extern lv_indev_t * indev_keypad;
@@ -280,6 +299,7 @@ void lvgl_main_task(void *pvParameters)
   lv_group_add_obj(my_group, label1);
   lv_indev_set_group(indev_keypad, my_group);
 
+  lv_obj_add_event_cb(button2, btn_event_handler, LV_EVENT_CLICKED, NULL);
 
   while(1) {
     // 4. 每 5ms~30ms 调用一次处理函数

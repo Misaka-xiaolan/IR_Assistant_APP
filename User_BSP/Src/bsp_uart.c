@@ -55,12 +55,84 @@ struct uart_device_t
     volatile uint8_t tx_busy; // 发送忙标志（0:空闲 1:发送中）
 };
 
+// 串口桥接上下文（复用局部变量，无新增结构体）
+typedef struct
+{
+    UART_Handle uart_a;          // 串口A句柄
+    UART_Handle uart_b;          // 串口B句柄
+} UART_BridgeCtx_t;
+
+// 全局桥接上下文
+static UART_BridgeCtx_t g_uart_bridge_ctx = {NULL, NULL};
+
 static UART_Handle uart_device_list[MAX_UART_DEVICE] = {0};
 
 static void UART_PerInstance_Task(void* params);
 static void UART_Start_DMATx(UART_Handle dev); // 启动DMA发送
 
-// --- 优化3：环形缓冲区操作 (高性能 memcpy 版本) ---
+// 串口A -> 串口B 透传回调函数
+static void UART_Bridge_Callback_A2B(uint8_t *data, uint16_t len)
+{
+    if (!data || len == 0) return;
+
+    // 获取透传上下文（通过回调函数隐式关联，这里用全局临时方案，也可通过dev私有数据扩展）
+    UART_Handle dest_dev = g_uart_bridge_ctx.uart_b;
+
+    // 循环发送直到数据全部写入发送缓冲区（应对缓冲区满的情况）
+    uint16_t sent_len = 0;
+    while (sent_len < len)
+    {
+        uint16_t free_size = UART_Get_TxBuffer_FreeSize(dest_dev);
+        if (free_size == 0)
+        {
+            // 缓冲区满，短延时后重试（避免死等，可根据系统调整延时）
+            vTaskDelay(pdMS_TO_TICKS(1));
+            continue;
+        }
+
+        uint16_t write_len = (len - sent_len) < free_size ? (len - sent_len) : free_size;
+        uint16_t actual_write = UART_Send_Data(dest_dev, data + sent_len, write_len);
+        if (actual_write == 0)
+        {
+            elog_warn(TAG, "UART A->B send failed, len: %d", write_len);
+            break;
+        }
+        sent_len += actual_write;
+    }
+
+    elog_verbose(TAG, "UART A->B bridge sent %d bytes", sent_len);
+}
+
+// 串口B -> 串口A 透传回调函数
+static void UART_Bridge_Callback_B2A(uint8_t *data, uint16_t len)
+{
+    if (!data || len == 0) return;
+
+    UART_Handle dest_dev = g_uart_bridge_ctx.uart_a;
+
+    uint16_t sent_len = 0;
+    while (sent_len < len)
+    {
+        uint16_t free_size = UART_Get_TxBuffer_FreeSize(dest_dev);
+        if (free_size == 0)
+        {
+            vTaskDelay(pdMS_TO_TICKS(1));
+            continue;
+        }
+
+        uint16_t write_len = (len - sent_len) < free_size ? (len - sent_len) : free_size;
+        uint16_t actual_write = UART_Send_Data(dest_dev, data + sent_len, write_len);
+        if (actual_write == 0)
+        {
+            elog_warn(TAG, "UART B->A send failed, len: %d", write_len);
+            break;
+        }
+        sent_len += actual_write;
+    }
+
+    elog_verbose(TAG, "UART B->A bridge sent %d bytes", sent_len);
+}
+
 
 // 获取环形缓冲区中当前可读的数据长度
 static inline uint16_t RingBuffer_GetLen(RingBuffer_t* rb)
@@ -497,3 +569,62 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef* huart, uint16_t size)
         }
     }
 }
+
+/**
+ * @brief 启动两个串口的双向透传（桥接）
+ * @param uart_a 串口A句柄
+ * @param uart_b 串口B句柄
+ * @return 0:成功 -1:失败
+ */
+int UART_Start_Bridge(UART_Handle uart_a, UART_Handle uart_b)
+{
+    // 参数校验
+    if (!uart_a || !uart_b || uart_a == uart_b)
+    {
+        elog_error(TAG, "Invalid UART handle for bridge (a: %p, b: %p)", uart_a, uart_b);
+        return -1;
+    }
+
+    // 保存桥接上下文
+    g_uart_bridge_ctx.uart_a = uart_a;
+    g_uart_bridge_ctx.uart_b = uart_b;
+
+    // 注册双向透传回调（覆盖原有回调，如需保留可先备份）
+    UART_Register_RxCallback(uart_a, UART_Bridge_Callback_A2B);
+    UART_Register_RxCallback(uart_b, UART_Bridge_Callback_B2A);
+
+    elog_info(TAG, "UART bridge started. Log disabled", uart_a, uart_b);
+    elog_set_output_enabled(false);
+    return 0;
+}
+
+/**
+ * @brief 停止串口桥接
+ * @param uart_a 串口A句柄
+ * @param uart_b 串口B句柄
+ * @return 0:成功 -1:失败
+ */
+int UART_Stop_Bridge(UART_Handle uart_a, UART_Handle uart_b)
+{
+    if (!uart_a || !uart_b)
+    {
+        elog_error(TAG, "Invalid UART handle for stop bridge");
+        return -1;
+    }
+
+    // 清空回调（恢复为NULL）
+    UART_Register_RxCallback(uart_a, NULL);
+    UART_Register_RxCallback(uart_b, NULL);
+
+    // 重置桥接上下文
+    if (g_uart_bridge_ctx.uart_a == uart_a && g_uart_bridge_ctx.uart_b == uart_b)
+    {
+        g_uart_bridge_ctx.uart_a = NULL;
+        g_uart_bridge_ctx.uart_b = NULL;
+    }
+
+    elog_set_output_enabled(true);
+    elog_info(TAG, "UART bridge stopped. Log enabled", uart_a, uart_b);
+    return 0;
+}
+
