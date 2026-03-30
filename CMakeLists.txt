@@ -39,6 +39,7 @@ add_executable(${CMAKE_PROJECT_NAME})
 add_subdirectory(cmake/stm32cubemx)
 add_subdirectory(User_Middlewares)
 add_subdirectory(User_BSP)
+add_subdirectory(User_APP)
 
 # Link directories setup
 target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
