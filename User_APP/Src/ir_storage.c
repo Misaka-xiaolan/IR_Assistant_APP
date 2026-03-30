@@ -44,11 +44,12 @@ static uint32_t Calculate_Struct_Checksum(const void* data, size_t size, size_t 
 
 /**
  * @brief 验证系统信息的校验和
- * @param info 系统信息指针
+ * @param data 系统信息指针
  * @return true: 校验成功, false: 校验失败
  */
-static bool Verify_System_Info(const system_info_t* info)
+static bool Verify_System_Info(const void* data)
 {
+    const system_info_t* info = (const system_info_t*)data;
     if (info->magic != STORAGE_MAGIC) {
         return false;
     }
@@ -71,12 +72,23 @@ static bool Verify_Remote_Index(const remote_index_t* index)
 }
 
 /**
- * @brief 验证按键数据的校验和
- * @param key 按键数据指针
+ * @brief 验证遥控器索引的校验和（用于Read_With_Recovery的包装函数）
+ * @param data 遥控器索引指针
  * @return true: 校验成功, false: 校验失败
  */
-static bool Verify_Key_Data(const key_data_t* key)
+static bool Verify_Remote_Index_Wrapper(const void* data)
 {
+    return Verify_Remote_Index((const remote_index_t*)data);
+}
+
+/**
+ * @brief 验证按键数据的校验和
+ * @param data 按键数据指针
+ * @return true: 校验成功, false: 校验失败
+ */
+static bool Verify_Key_Data(const void* data)
+{
+    const key_data_t* key = (const key_data_t*)data;
     uint32_t expected_crc = Calculate_Struct_Checksum(key, KEY_DATA_SIZE,
                                                        offsetof(key_data_t, checksum));
     return (key->checksum == expected_crc);
@@ -304,7 +316,7 @@ storage_handle_t* Storage_Init(void)
     /* 读取遥控器索引表（带双备份恢复） */
     status = Read_With_Recovery(STORAGE_INDEX_A_SECTOR, STORAGE_INDEX_B_SECTOR,
                                 handle.index_table, sizeof(handle.index_table),
-                                NULL); /* 索引表单独验证 */
+                                Verify_Remote_Index_Wrapper); /* 索引表单独验证 */
     
     if (status != STORAGE_OK) {
         /* 索引表损坏，清空 */
@@ -321,7 +333,7 @@ storage_status_t Storage_Format(storage_handle_t* handle)
         return STORAGE_ERROR_INVALID_PARAM;
     }
     
-    if (xSemaphoreTake(handle.mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
+    if (xSemaphoreTake(handle->mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
         return STORAGE_ERROR_BUSY;
     }
     
@@ -337,8 +349,10 @@ storage_status_t Storage_Format(storage_handle_t* handle)
     Norflash_Erase_Sector(STORAGE_INDEX_B_SECTOR);
     Norflash_Erase_Sector(STORAGE_INDEX_B_SECTOR + 1);
     
-    /* 擦除数据区域（仅擦除开始部分，完整擦除太耗时） */
-    for (uint32_t i = 0; i < 10; i++) {
+    /* 擦除数据区域（完整擦除） */
+    /* 计算数据区域总扇区数 */
+    uint32_t data_sectors = STORAGE_DATA_B_SECTOR - STORAGE_DATA_A_SECTOR;
+    for (uint32_t i = 0; i < data_sectors; i++) {
         Norflash_Erase_Sector(STORAGE_DATA_A_SECTOR + i);
         Norflash_Erase_Sector(STORAGE_DATA_B_SECTOR + i);
     }
@@ -370,7 +384,7 @@ storage_status_t Storage_AddRemote(storage_handle_t* handle, const char* name,
         return STORAGE_ERROR_INVALID_PARAM;
     }
     
-    if (xSemaphoreTake(handle.mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
+    if (xSemaphoreTake(handle->mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
         return STORAGE_ERROR_BUSY;
     }
     
@@ -424,7 +438,7 @@ storage_status_t Storage_DeleteRemote(storage_handle_t* handle, uint16_t remote_
         return STORAGE_ERROR_INVALID_PARAM;
     }
     
-    if (xSemaphoreTake(handle.mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
+    if (xSemaphoreTake(handle->mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
         return STORAGE_ERROR_BUSY;
     }
     
@@ -470,7 +484,7 @@ storage_status_t Storage_GetRemoteList(storage_handle_t* handle, remote_info_t* 
         return STORAGE_ERROR_INVALID_PARAM;
     }
     
-    if (xSemaphoreTake(handle.mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
+    if (xSemaphoreTake(handle->mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
         return STORAGE_ERROR_BUSY;
     }
     
@@ -495,7 +509,7 @@ storage_status_t Storage_GetRemoteInfo(storage_handle_t* handle, uint16_t remote
         return STORAGE_ERROR_INVALID_PARAM;
     }
     
-    if (xSemaphoreTake(handle.mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
+    if (xSemaphoreTake(handle->mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
         return STORAGE_ERROR_BUSY;
     }
     
@@ -525,7 +539,7 @@ storage_status_t Storage_AddKey(storage_handle_t* handle, uint16_t remote_id,
         return STORAGE_ERROR_INVALID_PARAM;
     }
     
-    if (xSemaphoreTake(handle.mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
+    if (xSemaphoreTake(handle->mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
         return STORAGE_ERROR_BUSY;
     }
     
@@ -601,7 +615,7 @@ storage_status_t Storage_DeleteKey(storage_handle_t* handle, uint16_t remote_id,
         return STORAGE_ERROR_INVALID_PARAM;
     }
     
-    if (xSemaphoreTake(handle.mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
+    if (xSemaphoreTake(handle->mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
         return STORAGE_ERROR_BUSY;
     }
     
@@ -658,7 +672,7 @@ storage_status_t Storage_GetKeyData(storage_handle_t* handle, uint16_t remote_id
         return STORAGE_ERROR_INVALID_PARAM;
     }
     
-    if (xSemaphoreTake(handle.mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
+    if (xSemaphoreTake(handle->mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
         return STORAGE_ERROR_BUSY;
     }
     
@@ -694,7 +708,7 @@ storage_status_t Storage_UpdateKey(storage_handle_t* handle, uint16_t remote_id,
         return STORAGE_ERROR_INVALID_PARAM;
     }
     
-    if (xSemaphoreTake(handle.mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
+    if (xSemaphoreTake(handle->mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
         return STORAGE_ERROR_BUSY;
     }
     
@@ -737,7 +751,7 @@ storage_status_t Storage_GetKeyList(storage_handle_t* handle, uint16_t remote_id
         return STORAGE_ERROR_INVALID_PARAM;
     }
     
-    if (xSemaphoreTake(handle.mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
+    if (xSemaphoreTake(handle->mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
         return STORAGE_ERROR_BUSY;
     }
     
