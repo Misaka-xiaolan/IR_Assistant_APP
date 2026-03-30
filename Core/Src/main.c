@@ -134,7 +134,6 @@ int main(void)
   elog_start();
   // test_log();
   elog_set_filter_lvl(ELOG_LVL_DEBUG);
-  Norflash_Init();
   lv_tick_set_cb(xTaskGetTickCount);
   /* USER CODE END 2 */
 
