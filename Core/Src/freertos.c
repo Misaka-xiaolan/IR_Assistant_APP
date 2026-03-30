@@ -29,6 +29,7 @@
 #include "bsp_dht20.h"
 #include "bsp_buzzer.h"
 #include "bsp_ir.h"
+#include "bsp_norflash.h"
 #include "bsp_uart.h"
 #include "i2c.h"
 #include "tim.h"
@@ -37,6 +38,8 @@
 #include "lv_port_lcd_stm32.h"
 #include "lv_port_other.h"
 #include "usart.h"
+#include "ir_storage.h"
+#include "src/misc/lv_event_private.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -62,6 +65,7 @@ Buzzer_Handle buzzer_handle;
 IR_Handle ir_handle;
 UART_Handle uart_lte_handle;
 UART_Handle uart_debug_handle;
+Storage_Handle storage_handle;
 extern DMA_HandleTypeDef hdma_tim2_ch3_up;
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
@@ -77,7 +81,7 @@ const osThreadAttr_t defaultTask_attributes = {
 osThreadId_t lvglTaskHandle;
 const osThreadAttr_t lvglTask_attributes = {
   .name = "lvglTask",
-  .stack_size = 3072,
+  .stack_size = 4096,
   .priority = (osPriority_t) 4,
 };
 void lvgl_main_task(void *pvParameters);
@@ -184,6 +188,10 @@ void MX_FREERTOS_Init(void) {
     .queue_depth = 3
   };
   ir_handle = IR_Init(&ir_config);
+
+  storage_handle = Storage_Init();
+  // Storage_Format(storage_handle);
+
   lvglTaskHandle = osThreadNew(lvgl_main_task, NULL, &lvglTask_attributes);
   /* USER CODE END RTOS_THREADS */
 
@@ -239,7 +247,7 @@ void StartDefaultTask(void *argument)
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
-static void btn_event_handler(lv_event_t* e)
+static void btn2_event_handler(lv_event_t* e)
 {
   static uint8_t flag = 0;
   lv_event_code_t code = lv_event_get_code(e);
@@ -255,6 +263,47 @@ static void btn_event_handler(lv_event_t* e)
     }
     flag = !flag;
     // 在此处添加你的业务逻辑，如跳转页面、开关功能等
+  }
+}
+
+static void btn3_event_handler(lv_event_t* e)
+{
+  static uint8_t id = 0;
+  uint16_t remote_id;
+  char name[10];
+  lv_event_code_t code = lv_event_get_code(e);
+  if (code == LV_EVENT_CLICKED)
+  {
+    sprintf(name, "remote%d", id);
+    Storage_AddRemote(storage_handle, name, &remote_id);
+    elog_info(TAG, "add remote id = %d, name = %s", remote_id, name);
+  }
+}
+
+static void btn1_event_handler(lv_event_t* e)
+{
+  remote_info_t list[10];
+  uint16_t count;
+  lv_event_code_t code = lv_event_get_code(e);
+  if (code == LV_EVENT_CLICKED)
+  {
+    Storage_GetRemoteList(storage_handle, list, 10, &count);
+    printf("total count = %d\r\n",  count);
+    for (int i = 0; i < count; ++i)
+    {
+      printf("list id: %d, name: %s, count: %d\r\n", list[i].id, list[i].name, list[i].key_count);
+    }
+  }
+}
+
+static void btn4_event_handler(lv_event_t* e)
+{
+  remote_info_t list[10];
+  uint16_t count;
+  lv_event_code_t code = lv_event_get_code(e);
+  if (code == LV_EVENT_CLICKED)
+  {
+
   }
 }
 
@@ -281,7 +330,7 @@ void lvgl_main_task(void *pvParameters)
   lv_obj_align(button1, LV_ALIGN_CENTER, 0, 40);
 
   lv_obj_t * button1_label = lv_label_create(button1);
-  lv_label_set_text(button1_label, "WCNM");
+  lv_label_set_text(button1_label, "Find");
   lv_obj_align(button1_label, LV_ALIGN_CENTER, 0, 0);
 
   lv_obj_t* button2 = lv_button_create(lv_screen_active());
@@ -293,13 +342,35 @@ void lvgl_main_task(void *pvParameters)
   lv_label_set_text(button2_label, "LJJ Love");
   lv_obj_align(button2_label, LV_ALIGN_CENTER, 0, 0);
 
+  lv_obj_t* button3 = lv_button_create(lv_screen_active());
+  lv_obj_set_width(button3, 60);
+  lv_obj_set_height(button3, 30);
+  lv_obj_align(button3, LV_ALIGN_CENTER, -50, 0);
+
+  lv_obj_t * button3_label = lv_label_create(button3);
+  lv_label_set_text(button3_label, "Add");
+  lv_obj_align(button3_label, LV_ALIGN_CENTER, 0, 0);
+
+  lv_obj_t* button4 = lv_button_create(lv_screen_active());
+  lv_obj_set_width(button4, 60);
+  lv_obj_set_height(button4, 30);
+  lv_obj_align(button4, LV_ALIGN_CENTER, 50, 0);
+
+  lv_obj_t * button4_label = lv_label_create(button4);
+  lv_label_set_text(button4_label, "Remove");
+  lv_obj_align(button4_label, LV_ALIGN_CENTER, 0, 0);
+
   lv_group_t *my_group = lv_group_create();
   lv_group_add_obj(my_group, button1);
   lv_group_add_obj(my_group, button2);
-  lv_group_add_obj(my_group, label1);
+  lv_group_add_obj(my_group, button3);
+  lv_group_add_obj(my_group, button4);
   lv_indev_set_group(indev_keypad, my_group);
 
-  lv_obj_add_event_cb(button2, btn_event_handler, LV_EVENT_CLICKED, NULL);
+  lv_obj_add_event_cb(button2, btn2_event_handler, LV_EVENT_CLICKED, NULL);
+  lv_obj_add_event_cb(button1, btn1_event_handler, LV_EVENT_CLICKED, NULL);
+  lv_obj_add_event_cb(button3, btn3_event_handler, LV_EVENT_CLICKED, NULL);
+  lv_obj_add_event_cb(button4, btn4_event_handler, LV_EVENT_CLICKED, NULL);
 
   while(1) {
     // 4. 每 5ms~30ms 调用一次处理函数

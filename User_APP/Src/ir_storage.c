@@ -153,7 +153,8 @@ static bool Verify_Key_Data(const void* data)
 static storage_status_t Write_With_Backup(uint32_t sector_a, uint32_t sector_b,
                                           const void* data, size_t size)
 {
-    uint8_t verify_buf[SECTOR_SIZE];
+    static uint8_t verify_buf[SECTOR_SIZE] = {0};
+    memset(verify_buf, 0, SECTOR_SIZE);
 
     elog_debug(TAG, "Writing data to flash with backup (sector A: %d, sector B: %d, size: %d)", 
                sector_a, sector_b, size);
@@ -256,7 +257,7 @@ static int16_t Find_Free_Remote_Slot(const storage_handle_t* handle)
     for (int16_t i = 0; i < STORAGE_MAX_REMOTES; i++)
     {
         if (handle->index_table[i].id == 0xFFFF ||
-            handle->index_table[i].key_count == 0)
+            handle->index_table[i].key_count == 0xFFFF)
         {
             return i;
         }
@@ -595,7 +596,7 @@ storage_status_t Storage_AddRemote(storage_handle_t* handle, const char* name,
     }
 
     /* 检查是否已达到最大遥控器数量 */
-    if (handle->sys_info.remote_count >= STORAGE_MAX_REMOTES)
+    if (handle->sys_info.remote_count >= STORAGE_MAX_REMOTES && handle->sys_info.remote_count != 0xFFFF)
     {
         elog_warn(TAG, "Maximum number of remotes (%d) reached", STORAGE_MAX_REMOTES);
         xSemaphoreGive(handle->mutex);
@@ -743,7 +744,7 @@ storage_status_t Storage_GetRemoteList(storage_handle_t* handle, remote_info_t* 
     *count = 0;
     for (int16_t i = 0; i < STORAGE_MAX_REMOTES && *count < max_count; i++)
     {
-        if (handle->index_table[i].key_count > 0)
+        if (handle->index_table[i].key_count != 0xFFFF)
         {
             list[*count].id = handle->index_table[i].id;
             list[*count].key_count = handle->index_table[i].key_count;

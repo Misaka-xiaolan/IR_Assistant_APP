@@ -154,6 +154,8 @@ typedef struct
     remote_index_t index_table[STORAGE_MAX_REMOTES]; /* 索引表缓存 */
 } storage_handle_t;
 
+typedef storage_handle_t* Storage_Handle;
+
 /**
  * @brief 初始化存储系统
  * @return 存储句柄，NULL表示失败

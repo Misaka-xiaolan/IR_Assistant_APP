@@ -22,17 +22,17 @@ void OnProjectLoad (void) {
   //
   // Dialog-generated settings
   //
-  Project.AddPathSubstitute ("D:/STM32/F411_Experiment/IR_Assistant/03_firmware/Test", "$(ProjectDir)");
-  Project.AddPathSubstitute ("d:/stm32/f411_experiment/ir_assistant/03_firmware/test", "$(ProjectDir)");
   Project.SetDevice ("STM32F411CE");
   Project.SetHostIF ("USB", "602725110");
   Project.SetTargetIF ("SWD");
   Project.SetTIFSpeed ("4 MHz");
+  Project.AddPathSubstitute ("D:/STM32/F411_Experiment/IR_Assistant/03_firmware/APP", "$(ProjectDir)");
+  Project.AddPathSubstitute ("d:/stm32/f411_experiment/ir_assistant/03_firmware/APP", "$(ProjectDir)");
   Project.AddSvdFile ("$(InstallDir)/Config/CPU/Cortex-M4F.svd");
   //
   // User settings
   //
-  File.Open ("$(ProjectDir)/build/Debug/IR_Assistant_Test.elf");
+  File.Open ("$(ProjectDir)/cmake-build-debug-stm32/IR_Assistant_APP.elf");
 }
 
 /*********************************************************************
