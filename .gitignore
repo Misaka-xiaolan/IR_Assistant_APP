@@ -2,6 +2,7 @@
 build/
 Build/
 cmake-build-debug-stm32/
+AI_Prompt/
 
 # 忽略 CMake 产生的中间文件
 cmake-build-*/
