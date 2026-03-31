@@ -333,7 +333,7 @@ UART_Handle UART_DMA_Init(UART_config_t* config)
     }
 
     // 创建任务
-    if (xTaskCreate(UART_PerInstance_Task, "UARTx_Task", 512, dev, 28, &dev->task) != pdPASS)
+    if (xTaskCreate(UART_PerInstance_Task, "UARTx_Task", 768, dev, 28, &dev->task) != pdPASS)
     {
         elog_error(TAG, "Failed to create UART task");
         vSemaphoreDelete(dev->rx_sem);
