@@ -73,8 +73,8 @@ extern DMA_HandleTypeDef hdma_tim2_ch3_up;
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
-  .stack_size = 768,
-  .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityLow,
 };
 
 /* Private function prototypes -----------------------------------------------*/
@@ -213,36 +213,11 @@ void MX_FREERTOS_Init(void) {
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN StartDefaultTask */
-  Buzzer_Beep(buzzer_handle, 20, 1000);
-  vTaskDelay(500);
-  // QueueHandle_t key_queue = Key_Event_Subscribe(key_handle);
-  // QueueHandle_t ir_queue = IR_Event_Subscribe(ir_handle);
-  // key_event_t key_event;
-  // ir_event_t ir_event = {0};
-  IR_Receive_Start(ir_handle);
+
   /* Infinite loop */
   for(;;)
   {
-    // if (xQueueReceive(key_queue, &key_event, 0) == pdTRUE)
-    // {
-    //
-    //   if (key_event.key_type == KEY_ENTER && key_event.key_action == KEY_RELEASE)
-    //   {
-    //     xQueueReceive(ir_queue, &ir_event, 0);
-    //     if (ir_event.len == 0)
-    //     {
-    //       Buzzer_Beep(buzzer_handle, 50, 262);
-    //       elog_info(TAG, "No IR data");
-    //     }
-    //     else
-    //     {
-    //       IR_Receive_Stop(ir_handle);
-    //       IR_Send(ir_handle, ir_event.data, ir_event.len);
-    //       Buzzer_Beep(buzzer_handle, 50, 392);
-    //     }
-    //   }
-    // }
-    osDelay(10);
+    osDelay(1000);
   }
   /* USER CODE END StartDefaultTask */
 }
