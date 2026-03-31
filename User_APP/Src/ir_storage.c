@@ -125,6 +125,12 @@ static bool Verify_Remote_Index_Wrapper(const void* data)
 static bool Verify_Key_Data(const void* data)
 {
     const key_data_t* key = (const key_data_t*)data;
+    // 如果是全新的扇区（全0xFF），认为它是合法的空位置
+    if (key->id == 0xFFFF && key->checksum == 0xFFFFFFFF)
+    {
+        return true;
+    }
+
     uint32_t expected_crc = Calculate_Struct_Checksum(key, KEY_DATA_SIZE,
                                                       offsetof(key_data_t, checksum));
     
@@ -153,8 +159,8 @@ static bool Verify_Key_Data(const void* data)
 static storage_status_t Write_With_Backup(uint32_t sector_a, uint32_t sector_b,
                                           const void* data, size_t size)
 {
-    static uint8_t verify_buf[SECTOR_SIZE] = {0};
-    memset(verify_buf, 0, SECTOR_SIZE);
+    static uint8_t verify_buf[SECTOR_SIZE > KEY_DATA_SIZE ? SECTOR_SIZE : KEY_DATA_SIZE] = {0};
+    memset(verify_buf, 0, SECTOR_SIZE > KEY_DATA_SIZE ? SECTOR_SIZE : KEY_DATA_SIZE);
 
     elog_debug(TAG, "Writing data to flash with backup (sector A: %d, sector B: %d, size: %d)", 
                sector_a, sector_b, size);
@@ -202,7 +208,8 @@ static storage_status_t Read_With_Recovery(uint32_t sector_a, uint32_t sector_b,
                                            void* data, size_t size,
                                            bool (*verify_func)(const void*))
 {
-    uint8_t backup_buf[SECTOR_SIZE];
+    static uint8_t backup_buf[SECTOR_SIZE > KEY_DATA_SIZE ? SECTOR_SIZE : KEY_DATA_SIZE] = {0};
+    memset(backup_buf, 0, SECTOR_SIZE > KEY_DATA_SIZE ? SECTOR_SIZE : KEY_DATA_SIZE);
 
     elog_debug(TAG, "Reading data from flash with recovery (sector A: %d, sector B: %d, size: %d)", 
                sector_a, sector_b, size);
@@ -276,7 +283,7 @@ static int16_t Find_Remote_Index(const storage_handle_t* handle, uint16_t remote
     for (int16_t i = 0; i < STORAGE_MAX_REMOTES; i++)
     {
         if (handle->index_table[i].id == remote_id &&
-            handle->index_table[i].key_count > 0)
+            handle->index_table[i].key_count !=0xFFFF)
         {
             return i;
         }
@@ -325,7 +332,7 @@ static storage_status_t Save_Remote_Index(storage_handle_t* handle)
     uint16_t valid_remotes = 0;
     for (int i = 0; i < STORAGE_MAX_REMOTES; i++)
     {
-        if (handle->index_table[i].key_count > 0)
+        if (handle->index_table[i].key_count != 0xFFFF)
         {
             handle->index_table[i].checksum =
                 Calculate_Struct_Checksum(&handle->index_table[i], REMOTE_INDEX_SIZE,
@@ -843,18 +850,27 @@ storage_status_t Storage_AddKey(storage_handle_t* handle, uint16_t remote_id,
     /* 查找空闲按键ID */
     uint16_t new_key_id = 0;
     bool found_free_slot = false;
+    key_data_t* temp_key = pvPortMalloc(sizeof(key_data_t));
+    if (temp_key == NULL)
+    {
+        elog_error(TAG, "Failed to allocate memory for key data");
+        xSemaphoreGive(handle->mutex);
+        return STORAGE_ERROR;
+    }
+    memset(temp_key, 0xFF, KEY_DATA_SIZE);
     for (uint16_t i = 0; i < STORAGE_MAX_KEYS_PER_REMOTE; i++)
     {
-        key_data_t temp_key;
+
         storage_status_t status = Read_Key_Data(STORAGE_DATA_A_SECTOR,
-                                                remote->data_offset, i, &temp_key);
-        if (status != STORAGE_OK || temp_key.id == 0xFFFF)
+                                                remote->data_offset, i, temp_key);
+        if (status != STORAGE_OK || temp_key->id == 0xFFFF)
         {
             new_key_id = i;
             found_free_slot = true;
             break;
         }
     }
+    vPortFree(temp_key);
     
     if (!found_free_slot)
     {
@@ -864,14 +880,20 @@ storage_status_t Storage_AddKey(storage_handle_t* handle, uint16_t remote_id,
     }
 
     /* 准备按键数据 */
-    key_data_t key_data;
-    memset(&key_data, 0, KEY_DATA_SIZE);
-    key_data.id = new_key_id;
-    strncpy(key_data.name, name, STORAGE_KEY_NAME_LEN - 1);
-    key_data.name[STORAGE_KEY_NAME_LEN - 1] = '\0';
-    key_data.data_len = len;
-    memcpy(key_data.data, data, len * sizeof(uint32_t));
-    key_data.checksum = Calculate_Struct_Checksum(&key_data, KEY_DATA_SIZE,
+    key_data_t* key_data = pvPortMalloc(sizeof(key_data_t));
+    if (key_data == NULL)
+    {
+        elog_error(TAG, "Failed to allocate memory for key data");
+        xSemaphoreGive(handle->mutex);
+        return STORAGE_ERROR;
+    }
+    memset(key_data, 0xFF, KEY_DATA_SIZE);
+    key_data->id = new_key_id;
+    strncpy(key_data->name, name, STORAGE_KEY_NAME_LEN - 1);
+    key_data->name[STORAGE_KEY_NAME_LEN - 1] = '\0';
+    key_data->data_len = len;
+    memcpy(key_data->data, data, len * sizeof(uint32_t));
+    key_data->checksum = Calculate_Struct_Checksum(key_data, KEY_DATA_SIZE,
                                                   offsetof(key_data_t, checksum));
 
     elog_info(TAG, "Adding key ID %d to remote ID %d (name: %s, data length: %d)", 
@@ -880,7 +902,8 @@ storage_status_t Storage_AddKey(storage_handle_t* handle, uint16_t remote_id,
     /* 写入按键数据 */
     storage_status_t status = Write_Key_Data(STORAGE_DATA_A_SECTOR,
                                              remote->data_offset,
-                                             new_key_id, &key_data);
+                                             new_key_id, key_data);
+    vPortFree(key_data);
 
     if (status == STORAGE_OK)
     {
@@ -956,10 +979,18 @@ storage_status_t Storage_DeleteKey(storage_handle_t* handle, uint16_t remote_id,
     remote_index_t* remote = &handle->index_table[idx];
 
     /* 检查按键是否存在 */
-    key_data_t temp_key;
+    key_data_t* temp_key = pvPortMalloc(sizeof(key_data_t));
+
+    if (temp_key == NULL)
+    {
+        elog_error(TAG, "Failed to allocate memory for key data");
+        xSemaphoreGive(handle->mutex);
+        return STORAGE_ERROR;
+    }
+    memset(temp_key, 0xFF, KEY_DATA_SIZE);
     storage_status_t status = Read_Key_Data(STORAGE_DATA_A_SECTOR,
-                                            remote->data_offset, key_id, &temp_key);
-    if (status != STORAGE_OK || temp_key.id == 0xFFFF)
+                                            remote->data_offset, key_id, temp_key);
+    if (status != STORAGE_OK || temp_key->id == 0xFFFF)
     {
         elog_warn(TAG, "Key ID %d not found in remote ID %d", key_id, remote_id);
         xSemaphoreGive(handle->mutex);
@@ -988,7 +1019,8 @@ storage_status_t Storage_DeleteKey(storage_handle_t* handle, uint16_t remote_id,
     handle->sys_info.total_keys--;
     
     elog_info(TAG, "Deleted key ID %d (name: %s) from remote ID %d", 
-              key_id, temp_key.name, remote_id);
+              key_id, temp_key->name, remote_id);
+    vPortFree(temp_key);
 
     /* 保存索引和系统信息 */
     status = Save_System_Info(handle);
@@ -1115,27 +1147,37 @@ storage_status_t Storage_UpdateKey(storage_handle_t* handle, uint16_t remote_id,
     remote_index_t* remote = &handle->index_table[idx];
 
     /* 读取现有按键数据 */
-    key_data_t key_data;
-    storage_status_t status = Read_Key_Data(STORAGE_DATA_A_SECTOR,
-                                            remote->data_offset, key_id, &key_data);
+    key_data_t* key_data = pvPortMalloc(sizeof(key_data_t));
 
-    if (status != STORAGE_OK || key_data.id == 0xFFFF)
+    if (key_data == NULL)
+    {
+        elog_error(TAG, "Failed to allocate memory for key data");
+        xSemaphoreGive(handle->mutex);
+        return STORAGE_ERROR;
+    }
+    memset(key_data, 0xFF, KEY_DATA_SIZE);
+    storage_status_t status = Read_Key_Data(STORAGE_DATA_A_SECTOR,
+                                            remote->data_offset, key_id, key_data);
+
+    if (status != STORAGE_OK || key_data->id == 0xFFFF)
     {
         elog_warn(TAG, "Key ID %d not found in remote ID %d for update", key_id, remote_id);
         xSemaphoreGive(handle->mutex);
         return STORAGE_ERROR_NOT_FOUND;
     }
 
-    elog_debug(TAG, "Updating key ID %d (name: %s) in remote ID %d", key_id, key_data.name, remote_id);
+    elog_debug(TAG, "Updating key ID %d (name: %s) in remote ID %d", key_id, key_data->name, remote_id);
 
     /* 更新按键数据 */
-    key_data.data_len = len;
-    memcpy(key_data.data, data, len * sizeof(uint32_t));
-    key_data.checksum = Calculate_Struct_Checksum(&key_data, KEY_DATA_SIZE,
+    key_data->data_len = len;
+    memcpy(key_data->data, data, len * sizeof(uint32_t));
+    key_data->checksum = Calculate_Struct_Checksum(key_data, KEY_DATA_SIZE,
                                                   offsetof(key_data_t, checksum));
 
     /* 写入更新后的数据 */
-    status = Write_Key_Data(STORAGE_DATA_A_SECTOR, remote->data_offset, key_id, &key_data);
+    status = Write_Key_Data(STORAGE_DATA_A_SECTOR, remote->data_offset, key_id, key_data);
+
+    vPortFree(key_data);
 
     if (status == STORAGE_OK)
     {
@@ -1180,20 +1222,29 @@ storage_status_t Storage_GetKeyList(storage_handle_t* handle, uint16_t remote_id
     *count = 0;
 
     /* 遍历所有可能的按键ID */
+    key_data_t* key_data = pvPortMalloc(sizeof(key_data_t));
+
+    if (key_data == NULL)
+    {
+        elog_error(TAG, "Failed to allocate memory for key data");
+        xSemaphoreGive(handle->mutex);
+        return STORAGE_ERROR;
+    }
+    memset(key_data, 0xFF, KEY_DATA_SIZE);
     for (uint16_t i = 0; i < STORAGE_MAX_KEYS_PER_REMOTE && *count < max_count; i++)
     {
-        key_data_t key_data;
         storage_status_t status = Read_Key_Data(STORAGE_DATA_A_SECTOR,
-                                                remote->data_offset, i, &key_data);
+                                                remote->data_offset, i, key_data);
 
-        if (status == STORAGE_OK && key_data.id != 0xFFFF)
+        if (status == STORAGE_OK && key_data->id != 0xFFFF)
         {
-            list[*count].id = key_data.id;
-            list[*count].data_len = key_data.data_len;
-            strncpy(list[*count].name, key_data.name, STORAGE_KEY_NAME_LEN);
+            list[*count].id = key_data->id;
+            list[*count].data_len = key_data->data_len;
+            strncpy(list[*count].name, key_data->name, STORAGE_KEY_NAME_LEN);
             (*count)++;
         }
     }
+    vPortFree(key_data);
 
     elog_info(TAG, "Key list retrieved for remote ID %d (count: %d)", remote_id, *count);
 

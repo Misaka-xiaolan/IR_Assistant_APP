@@ -213,33 +213,33 @@ void StartDefaultTask(void *argument)
   /* USER CODE BEGIN StartDefaultTask */
   Buzzer_Beep(buzzer_handle, 20, 1000);
   vTaskDelay(500);
-  QueueHandle_t key_queue = Key_Event_Subscribe(key_handle);
-  QueueHandle_t ir_queue = IR_Event_Subscribe(ir_handle);
-  key_event_t key_event;
-  ir_event_t ir_event = {0};
-  // IR_Receive_Start(ir_handle);
+  // QueueHandle_t key_queue = Key_Event_Subscribe(key_handle);
+  // QueueHandle_t ir_queue = IR_Event_Subscribe(ir_handle);
+  // key_event_t key_event;
+  // ir_event_t ir_event = {0};
+  IR_Receive_Start(ir_handle);
   /* Infinite loop */
   for(;;)
   {
-    if (xQueueReceive(key_queue, &key_event, 0) == pdTRUE)
-    {
-
-      if (key_event.key_type == KEY_ENTER && key_event.key_action == KEY_RELEASE)
-      {
-        xQueueReceive(ir_queue, &ir_event, 0);
-        if (ir_event.len == 0)
-        {
-          Buzzer_Beep(buzzer_handle, 50, 262);
-          elog_info(TAG, "No IR data");
-        }
-        else
-        {
-          IR_Receive_Stop(ir_handle);
-          IR_Send(ir_handle, ir_event.data, ir_event.len);
-          Buzzer_Beep(buzzer_handle, 50, 392);
-        }
-      }
-    }
+    // if (xQueueReceive(key_queue, &key_event, 0) == pdTRUE)
+    // {
+    //
+    //   if (key_event.key_type == KEY_ENTER && key_event.key_action == KEY_RELEASE)
+    //   {
+    //     xQueueReceive(ir_queue, &ir_event, 0);
+    //     if (ir_event.len == 0)
+    //     {
+    //       Buzzer_Beep(buzzer_handle, 50, 262);
+    //       elog_info(TAG, "No IR data");
+    //     }
+    //     else
+    //     {
+    //       IR_Receive_Stop(ir_handle);
+    //       IR_Send(ir_handle, ir_event.data, ir_event.len);
+    //       Buzzer_Beep(buzzer_handle, 50, 392);
+    //     }
+    //   }
+    // }
     osDelay(10);
   }
   /* USER CODE END StartDefaultTask */
@@ -249,19 +249,24 @@ void StartDefaultTask(void *argument)
 /* USER CODE BEGIN Application */
 static void btn2_event_handler(lv_event_t* e)
 {
-  static uint8_t flag = 0;
+  ir_event_t ir_event = {0};
   lv_event_code_t code = lv_event_get_code(e);
+  uint16_t key_id;
   if (code == LV_EVENT_CLICKED)
   {
-    if (flag == 0)
+    xQueueReceive(e->user_data, &ir_event, 0);
+    if (ir_event.len == 0)
     {
-      UART_Start_Bridge(uart_debug_handle, uart_lte_handle);
+      Buzzer_Beep(buzzer_handle, 50, 262);
+      elog_info(TAG, "No IR data");
     }
     else
     {
-      UART_Stop_Bridge(uart_debug_handle, uart_lte_handle);
+      IR_Receive_Stop(ir_handle);
+      Storage_AddKey(storage_handle, 1, "ir_data", ir_event.data, ir_event.len, &key_id);
+      Buzzer_Beep(buzzer_handle, 50, 392);
+      IR_Event_Unsubscribe(ir_handle, e->user_data);
     }
-    flag = !flag;
     // 在此处添加你的业务逻辑，如跳转页面、开关功能等
   }
 }
@@ -298,12 +303,33 @@ static void btn1_event_handler(lv_event_t* e)
 
 static void btn4_event_handler(lv_event_t* e)
 {
-  remote_info_t list[10];
+  key_info_t list[10];
   uint16_t count;
   lv_event_code_t code = lv_event_get_code(e);
   if (code == LV_EVENT_CLICKED)
   {
+    // Storage_GetRemoteList(storage_handle, list, 10, &count);
+    // Storage_DeleteRemote(storage_handle, count);
+    Storage_GetKeyList(storage_handle, 1, list, 10, &count);
+    Storage_DeleteKey(storage_handle, 1, list[count - 1].id);
+  }
+}
 
+static void btn5_event_handler(lv_event_t* e)
+{
+  key_info_t list[10];
+  uint16_t count;
+  lv_event_code_t code = lv_event_get_code(e);
+  if (code == LV_EVENT_CLICKED)
+  {
+    Storage_GetKeyList(storage_handle, 1, list, 10, &count);
+    if (count > 0)
+    {
+      key_data_t* temp_data = pvPortMalloc(sizeof(key_data_t));
+      Storage_GetKeyData(storage_handle, 1, list[count - 1].id, temp_data);
+      IR_Send(ir_handle, temp_data->data, temp_data->data_len);
+      vPortFree(temp_data);
+    }
   }
 }
 
@@ -339,13 +365,13 @@ void lvgl_main_task(void *pvParameters)
   lv_obj_align(button2, LV_ALIGN_CENTER, 0, -40);
 
   lv_obj_t * button2_label = lv_label_create(button2);
-  lv_label_set_text(button2_label, "LJJ Love");
+  lv_label_set_text(button2_label, "Save");
   lv_obj_align(button2_label, LV_ALIGN_CENTER, 0, 0);
 
   lv_obj_t* button3 = lv_button_create(lv_screen_active());
   lv_obj_set_width(button3, 60);
   lv_obj_set_height(button3, 30);
-  lv_obj_align(button3, LV_ALIGN_CENTER, -50, 0);
+  lv_obj_align(button3, LV_ALIGN_CENTER, -80, 40);
 
   lv_obj_t * button3_label = lv_label_create(button3);
   lv_label_set_text(button3_label, "Add");
@@ -354,23 +380,36 @@ void lvgl_main_task(void *pvParameters)
   lv_obj_t* button4 = lv_button_create(lv_screen_active());
   lv_obj_set_width(button4, 60);
   lv_obj_set_height(button4, 30);
-  lv_obj_align(button4, LV_ALIGN_CENTER, 50, 0);
+  lv_obj_align(button4, LV_ALIGN_CENTER, 80, 40);
 
   lv_obj_t * button4_label = lv_label_create(button4);
   lv_label_set_text(button4_label, "Remove");
   lv_obj_align(button4_label, LV_ALIGN_CENTER, 0, 0);
+
+  lv_obj_t* button5 = lv_button_create(lv_screen_active());
+  lv_obj_set_width(button5, 60);
+  lv_obj_set_height(button5, 30);
+  lv_obj_align(button5, LV_ALIGN_CENTER, 0, 0);
+
+  lv_obj_t * button5_label = lv_label_create(button5);
+  lv_label_set_text(button5_label, "Send");
+  lv_obj_align(button5_label, LV_ALIGN_CENTER, 0, 0);
 
   lv_group_t *my_group = lv_group_create();
   lv_group_add_obj(my_group, button1);
   lv_group_add_obj(my_group, button2);
   lv_group_add_obj(my_group, button3);
   lv_group_add_obj(my_group, button4);
+  lv_group_add_obj(my_group, button5);
   lv_indev_set_group(indev_keypad, my_group);
 
-  lv_obj_add_event_cb(button2, btn2_event_handler, LV_EVENT_CLICKED, NULL);
+  QueueHandle_t ir_queue = IR_Event_Subscribe(ir_handle);
+
+  lv_obj_add_event_cb(button2, btn2_event_handler, LV_EVENT_CLICKED, ir_queue);
   lv_obj_add_event_cb(button1, btn1_event_handler, LV_EVENT_CLICKED, NULL);
   lv_obj_add_event_cb(button3, btn3_event_handler, LV_EVENT_CLICKED, NULL);
   lv_obj_add_event_cb(button4, btn4_event_handler, LV_EVENT_CLICKED, NULL);
+  lv_obj_add_event_cb(button5, btn5_event_handler, LV_EVENT_CLICKED, NULL);
 
   while(1) {
     // 4. 每 5ms~30ms 调用一次处理函数

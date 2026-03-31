@@ -1,23 +1,33 @@
 
 
-OpenDocument="startup_stm32f411xe.s", FilePath="D:/STM32/F411_Experiment/IR_Assistant/03_firmware/Test/startup_stm32f411xe.s", Line=40
-OpenDocument="freertos.c", FilePath="D:/STM32/F411_Experiment/IR_Assistant/03_firmware/Test/Core/Src/freertos.c", Line=33
-OpenDocument="stm32f4xx_hal_tim.c", FilePath="D:/STM32/F411_Experiment/IR_Assistant/03_firmware/Test/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.c", Line=3828
-OpenDocument="bsp_ir.c", FilePath="D:/STM32/F411_Experiment/IR_Assistant/03_firmware/Test/User_BSP/Src/bsp_ir.c", Line=251
-OpenDocument="main.c", FilePath="D:/STM32/F411_Experiment/IR_Assistant/03_firmware/Test/Core/Src/main.c", Line=39
+OpenDocument="ir_storage.c", FilePath="D:/STM32/F411_Experiment/IR_Assistant/03_firmware/APP/User_APP/Src/ir_storage.c", Line=855
+OpenDocument="startup_stm32f411xe.s", FilePath="D:/STM32/F411_Experiment/IR_Assistant/03_firmware/APP/startup_stm32f411xe.s", Line=46
+OpenDocument="stm32f4xx_hal_spi.c", FilePath="D:/STM32/F411_Experiment/IR_Assistant/03_firmware/APP/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_spi.c", Line=1172
+OpenDocument="queue.c", FilePath="D:/STM32/F411_Experiment/IR_Assistant/03_firmware/APP/Middlewares/Third_Party/FreeRTOS/Source/queue.c", Line=732
+OpenDocument="stm32f4xx_it.c", FilePath="D:/STM32/F411_Experiment/IR_Assistant/03_firmware/APP/Core/Src/stm32f4xx_it.c", Line=81
+OpenDocument="bsp_norflash.c", FilePath="D:/STM32/F411_Experiment/IR_Assistant/03_firmware/APP/User_BSP/Src/bsp_norflash.c", Line=223
+OpenDocument="tasks.c", FilePath="D:/STM32/F411_Experiment/IR_Assistant/03_firmware/APP/Middlewares/Third_Party/FreeRTOS/Source/tasks.c", Line=3635
+OpenDocument="freertos.c", FilePath="D:/STM32/F411_Experiment/IR_Assistant/03_firmware/APP/Core/Src/freertos.c", Line=262
+OpenDocument="main.c", FilePath="D:/STM32/F411_Experiment/IR_Assistant/03_firmware/APP/Core/Src/main.c", Line=71
 OpenToolbar="Debug", Floating=0, x=0, y=0
-OpenWindow="Registers 1", DockArea=RIGHT, x=0, y=0, w=300, h=961, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, FilteredItems=[], RefreshRate=1
-OpenWindow="Source Files", DockArea=LEFT, x=0, y=1, w=454, h=196, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Memory 1", DockArea=BOTTOM, x=1, y=0, w=1287, h=323, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, EditorAddress=0x200201A0
-OpenWindow="Watched Data 1", DockArea=LEFT, x=0, y=2, w=454, h=250, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Functions", DockArea=LEFT, x=0, y=0, w=454, h=513, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Call Stack", DockArea=RIGHT, x=0, y=1, w=832, h=181, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Registers 1", DockArea=RIGHT, x=0, y=2, w=832, h=540, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, FilteredItems=[], RefreshRate=1
+OpenWindow="Source Files", DockArea=LEFT, x=0, y=2, w=454, h=152, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Disassembly", DockArea=RIGHT, x=0, y=0, w=832, h=238, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Break & Tracepoints", DockArea=LEFT, x=0, y=0, w=454, h=241, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, VectorCatchIndexMask=254
+OpenWindow="Memory 1", DockArea=BOTTOM, x=1, y=0, w=1287, h=323, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, EditorAddress=0x200080E8
+OpenWindow="Watched Data 1", DockArea=LEFT, x=0, y=3, w=454, h=189, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Functions", DockArea=LEFT, x=0, y=1, w=454, h=376, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
 OpenWindow="Console", DockArea=BOTTOM, x=0, y=0, w=1272, h=323, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
 SmartViewPlugin="", Page="", Toolbar="Hidden", Window="SmartView 1"
-TableHeader="Functions", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Address";"Size";"#Insts";"Source"], ColWidths=[1435;100;100;100;100]
-TableHeader="Source Files", SortCol="File", SortOrder="ASCENDING", VisibleCols=["File";"Status";"Size";"#Insts";"Path"], ColWidths=[240;100;100;100;100]
+TableHeader="Functions", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Address";"Size";"#Insts";"Source"], ColWidths=[1435;100;100;100;700]
+TableHeader="Source Files", SortCol="File", SortOrder="ASCENDING", VisibleCols=["File";"Status";"Size";"#Insts";"Path"], ColWidths=[240;100;100;100;966]
 TableHeader="Power Sampling", SortCol="None", SortOrder="ASCENDING", VisibleCols=["Index";"Time";"Ch 0"], ColWidths=[100;100;100]
-TableHeader="Registers 1", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Description"], ColWidths=[100;118;259]
+TableHeader="Registers 1", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Description"], ColWidths=[100;118;614]
 TableHeader="Watched Data 1", SortCol="Expression", SortOrder="ASCENDING", VisibleCols=["Expression";"Value";"Location";"Refresh"], ColWidths=[140;100;100;114]
 TableHeader="RegisterSelectionDialog", SortCol="None", SortOrder="ASCENDING", VisibleCols=[], ColWidths=[]
 TableHeader="TargetExceptionDialog", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Address";"Description"], ColWidths=[200;100;100;351]
-WatchedExpression="ir_handle", RefreshRate=2, Window=Watched Data 1
+TableHeader="Call Stack", SortCol="Function", SortOrder="ASCENDING", VisibleCols=["Function";"Stack Frame";"Source";"PC";"Return Address";"Stack Used"], ColWidths=[133;126;161;100;190;122]
+TableHeader="Vector Catches", SortCol="", SortOrder="ASCENDING", VisibleCols=["";"Vector Catch";"Description"], ColWidths=[50;300;500]
+TableHeader="Break & Tracepoints", SortCol="", SortOrder="ASCENDING", VisibleCols=["";"Type";"Location";"Extras"], ColWidths=[100;100;100;154]
+WatchedExpression="storage_handle", RefreshRate=2, Window=Watched Data 1
