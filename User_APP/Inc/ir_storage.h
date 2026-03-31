@@ -33,8 +33,8 @@ extern "C" {
 #define STORAGE_DATA_B_SECTOR       516         /* 数据区域B: 扇区516-1023 */
 
 /* 容量限制 */
-#define STORAGE_MAX_REMOTES         10          /* 最大遥控器数量 */
-#define STORAGE_MAX_KEYS_PER_REMOTE 20          /* 每个遥控器最大按键数 */
+#define STORAGE_MAX_REMOTES         4          /* 最大遥控器数量 */
+#define STORAGE_MAX_KEYS_PER_REMOTE 10          /* 每个遥控器最大按键数 */
 #define STORAGE_MAX_KEY_DATA_LEN    1024        /* 按键数据最大长度（uint32_t个数） */
 
 /* 名称长度限制 */

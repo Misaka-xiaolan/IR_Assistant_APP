@@ -224,91 +224,91 @@ void StartDefaultTask(void *argument)
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
-static void btn2_event_handler(lv_event_t* e)
-{
-  ir_event_t ir_event = {0};
-  lv_event_code_t code = lv_event_get_code(e);
-  uint16_t key_id;
-  if (code == LV_EVENT_CLICKED)
-  {
-    xQueueReceive(e->user_data, &ir_event, 0);
-    if (ir_event.len == 0)
-    {
-      Buzzer_Beep(buzzer_handle, 50, 262);
-      elog_info(TAG, "No IR data");
-    }
-    else
-    {
-      IR_Receive_Stop(ir_handle);
-      Storage_AddKey(storage_handle, 1, "ir_data", ir_event.data, ir_event.len, &key_id);
-      Buzzer_Beep(buzzer_handle, 50, 392);
-      IR_Event_Unsubscribe(ir_handle, e->user_data);
-    }
-    // 在此处添加你的业务逻辑，如跳转页面、开关功能等
-  }
-}
-
-static void btn3_event_handler(lv_event_t* e)
-{
-  static uint8_t id = 0;
-  uint16_t remote_id;
-  char name[10];
-  lv_event_code_t code = lv_event_get_code(e);
-  if (code == LV_EVENT_CLICKED)
-  {
-    sprintf(name, "remote%d", id);
-    Storage_AddRemote(storage_handle, name, &remote_id);
-    elog_info(TAG, "add remote id = %d, name = %s", remote_id, name);
-  }
-}
-
-static void btn1_event_handler(lv_event_t* e)
-{
-  remote_info_t list[10];
-  uint16_t count;
-  lv_event_code_t code = lv_event_get_code(e);
-  if (code == LV_EVENT_CLICKED)
-  {
-    Storage_GetRemoteList(storage_handle, list, 10, &count);
-    printf("total count = %d\r\n",  count);
-    for (int i = 0; i < count; ++i)
-    {
-      printf("list id: %d, name: %s, count: %d\r\n", list[i].id, list[i].name, list[i].key_count);
-    }
-  }
-}
-
-static void btn4_event_handler(lv_event_t* e)
-{
-  key_info_t list[10];
-  uint16_t count;
-  lv_event_code_t code = lv_event_get_code(e);
-  if (code == LV_EVENT_CLICKED)
-  {
-    // Storage_GetRemoteList(storage_handle, list, 10, &count);
-    // Storage_DeleteRemote(storage_handle, count);
-    Storage_GetKeyList(storage_handle, 1, list, 10, &count);
-    Storage_DeleteKey(storage_handle, 1, list[count - 1].id);
-  }
-}
-
-static void btn5_event_handler(lv_event_t* e)
-{
-  key_info_t list[10];
-  uint16_t count;
-  lv_event_code_t code = lv_event_get_code(e);
-  if (code == LV_EVENT_CLICKED)
-  {
-    Storage_GetKeyList(storage_handle, 1, list, 10, &count);
-    if (count > 0)
-    {
-      key_data_t* temp_data = pvPortMalloc(sizeof(key_data_t));
-      Storage_GetKeyData(storage_handle, 1, list[count - 1].id, temp_data);
-      IR_Send(ir_handle, temp_data->data, temp_data->data_len);
-      vPortFree(temp_data);
-    }
-  }
-}
+// static void btn2_event_handler(lv_event_t* e)
+// {
+//   ir_event_t ir_event = {0};
+//   lv_event_code_t code = lv_event_get_code(e);
+//   uint16_t key_id;
+//   if (code == LV_EVENT_CLICKED)
+//   {
+//     xQueueReceive(e->user_data, &ir_event, 0);
+//     if (ir_event.len == 0)
+//     {
+//       Buzzer_Beep(buzzer_handle, 50, 262);
+//       elog_info(TAG, "No IR data");
+//     }
+//     else
+//     {
+//       IR_Receive_Stop(ir_handle);
+//       Storage_AddKey(storage_handle, 1, "ir_data", ir_event.data, ir_event.len, &key_id);
+//       Buzzer_Beep(buzzer_handle, 50, 392);
+//       IR_Event_Unsubscribe(ir_handle, e->user_data);
+//     }
+//     // 在此处添加你的业务逻辑，如跳转页面、开关功能等
+//   }
+// }
+//
+// static void btn3_event_handler(lv_event_t* e)
+// {
+//   static uint8_t id = 0;
+//   uint16_t remote_id;
+//   char name[10];
+//   lv_event_code_t code = lv_event_get_code(e);
+//   if (code == LV_EVENT_CLICKED)
+//   {
+//     sprintf(name, "remote%d", id);
+//     Storage_AddRemote(storage_handle, name, &remote_id);
+//     elog_info(TAG, "add remote id = %d, name = %s", remote_id, name);
+//   }
+// }
+//
+// static void btn1_event_handler(lv_event_t* e)
+// {
+//   remote_info_t list[10];
+//   uint16_t count;
+//   lv_event_code_t code = lv_event_get_code(e);
+//   if (code == LV_EVENT_CLICKED)
+//   {
+//     Storage_GetRemoteList(storage_handle, list, 10, &count);
+//     printf("total count = %d\r\n",  count);
+//     for (int i = 0; i < count; ++i)
+//     {
+//       printf("list id: %d, name: %s, count: %d\r\n", list[i].id, list[i].name, list[i].key_count);
+//     }
+//   }
+// }
+//
+// static void btn4_event_handler(lv_event_t* e)
+// {
+//   key_info_t list[10];
+//   uint16_t count;
+//   lv_event_code_t code = lv_event_get_code(e);
+//   if (code == LV_EVENT_CLICKED)
+//   {
+//     // Storage_GetRemoteList(storage_handle, list, 10, &count);
+//     // Storage_DeleteRemote(storage_handle, count);
+//     Storage_GetKeyList(storage_handle, 1, list, 10, &count);
+//     Storage_DeleteKey(storage_handle, 1, list[count - 1].id);
+//   }
+// }
+//
+// static void btn5_event_handler(lv_event_t* e)
+// {
+//   key_info_t list[10];
+//   uint16_t count;
+//   lv_event_code_t code = lv_event_get_code(e);
+//   if (code == LV_EVENT_CLICKED)
+//   {
+//     Storage_GetKeyList(storage_handle, 1, list, 10, &count);
+//     if (count > 0)
+//     {
+//       key_data_t* temp_data = pvPortMalloc(sizeof(key_data_t));
+//       Storage_GetKeyData(storage_handle, 1, list[count - 1].id, temp_data);
+//       IR_Send(ir_handle, temp_data->data, temp_data->data_len);
+//       vPortFree(temp_data);
+//     }
+//   }
+// }
 
 void lvgl_main_task(void *pvParameters)
 {
@@ -320,73 +320,50 @@ void lvgl_main_task(void *pvParameters)
   lv_port_display_init();
   lv_port_indev_init();
 
-  lv_obj_t * label1 = lv_label_create(lv_screen_active());
-  lv_label_set_long_mode(label1, LV_LABEL_LONG_WRAP);     /*Break the long lines*/
-  lv_label_set_text(label1, "Misaka LVGL Demo");
-  lv_obj_set_width(label1, 150);  /*Set smaller width to make the lines wrap*/
-  lv_obj_set_style_text_align(label1, LV_TEXT_ALIGN_CENTER, 0);
-  lv_obj_align(label1, LV_ALIGN_TOP_MID, 0, 0);
+  lv_obj_t * btn1 = lv_btn_create(lv_screen_active());
+  lv_obj_t * btn2 = lv_btn_create(lv_screen_active());
+  lv_obj_t * btn3 = lv_btn_create(lv_screen_active());
+  lv_obj_t * btn4 = lv_btn_create(lv_screen_active());
 
-  lv_obj_t* button1 = lv_button_create(lv_screen_active());
-  lv_obj_set_width(button1, 60);
-  lv_obj_set_height(button1, 30);
-  lv_obj_align(button1, LV_ALIGN_CENTER, 0, 40);
+  lv_obj_set_width(btn1, lv_pct(30)); // 宽度占满父容器，或者设为固定值
+  lv_obj_set_width(btn2, lv_pct(30)); // 宽度占满父容器，或者设为固定值
+  lv_obj_set_width(btn3, lv_pct(30)); // 宽度占满父容器，或者设为固定值
+  lv_obj_set_width(btn4, lv_pct(30)); // 宽度占满父容器，或者设为固定值
 
-  lv_obj_t * button1_label = lv_label_create(button1);
-  lv_label_set_text(button1_label, "Find");
-  lv_obj_align(button1_label, LV_ALIGN_CENTER, 0, 0);
+  lv_obj_set_x(btn1, 50);
+  lv_obj_set_y(btn1, 10);
 
-  lv_obj_t* button2 = lv_button_create(lv_screen_active());
-  lv_obj_set_width(button2, 60);
-  lv_obj_set_height(button2, 30);
-  lv_obj_align(button2, LV_ALIGN_CENTER, 0, -40);
+  lv_obj_set_x(btn2, 50);
+  lv_obj_set_y(btn2, 60);
 
-  lv_obj_t * button2_label = lv_label_create(button2);
-  lv_label_set_text(button2_label, "Save");
-  lv_obj_align(button2_label, LV_ALIGN_CENTER, 0, 0);
+  lv_obj_set_x(btn3, 160);
+  lv_obj_set_y(btn3, 10);
 
-  lv_obj_t* button3 = lv_button_create(lv_screen_active());
-  lv_obj_set_width(button3, 60);
-  lv_obj_set_height(button3, 30);
-  lv_obj_align(button3, LV_ALIGN_CENTER, -80, 40);
+  lv_obj_set_x(btn4, 160);
+  lv_obj_set_y(btn4, 60);
 
-  lv_obj_t * button3_label = lv_label_create(button3);
-  lv_label_set_text(button3_label, "Add");
-  lv_obj_align(button3_label, LV_ALIGN_CENTER, 0, 0);
-
-  lv_obj_t* button4 = lv_button_create(lv_screen_active());
-  lv_obj_set_width(button4, 60);
-  lv_obj_set_height(button4, 30);
-  lv_obj_align(button4, LV_ALIGN_CENTER, 80, 40);
-
-  lv_obj_t * button4_label = lv_label_create(button4);
-  lv_label_set_text(button4_label, "Remove");
-  lv_obj_align(button4_label, LV_ALIGN_CENTER, 0, 0);
-
-  lv_obj_t* button5 = lv_button_create(lv_screen_active());
-  lv_obj_set_width(button5, 60);
-  lv_obj_set_height(button5, 30);
-  lv_obj_align(button5, LV_ALIGN_CENTER, 0, 0);
-
-  lv_obj_t * button5_label = lv_label_create(button5);
-  lv_label_set_text(button5_label, "Send");
-  lv_obj_align(button5_label, LV_ALIGN_CENTER, 0, 0);
+  lv_obj_t * label = lv_label_create(btn1);
+  lv_label_set_text(label, "Remote 1");
+  lv_obj_center(label); // 文字居中
+  label = lv_label_create(btn2);
+  lv_label_set_text(label, "Remote 2");
+  lv_obj_center(label); // 文字居中
+  label = lv_label_create(btn3);
+  lv_label_set_text(label, "Remote 3");
+  lv_obj_center(label); // 文字居中
+  label = lv_label_create(btn4);
+  lv_label_set_text(label, "Remote 4");
+  lv_obj_center(label); // 文字居中
 
   lv_group_t *my_group = lv_group_create();
-  lv_group_add_obj(my_group, button1);
-  lv_group_add_obj(my_group, button2);
-  lv_group_add_obj(my_group, button3);
-  lv_group_add_obj(my_group, button4);
-  lv_group_add_obj(my_group, button5);
+  lv_group_add_obj(my_group, btn1);
+  lv_group_add_obj(my_group, btn2);
+  lv_group_add_obj(my_group, btn3);
+  lv_group_add_obj(my_group, btn4);
   lv_indev_set_group(indev_keypad, my_group);
 
   QueueHandle_t ir_queue = IR_Event_Subscribe(ir_handle);
 
-  lv_obj_add_event_cb(button2, btn2_event_handler, LV_EVENT_CLICKED, ir_queue);
-  lv_obj_add_event_cb(button1, btn1_event_handler, LV_EVENT_CLICKED, NULL);
-  lv_obj_add_event_cb(button3, btn3_event_handler, LV_EVENT_CLICKED, NULL);
-  lv_obj_add_event_cb(button4, btn4_event_handler, LV_EVENT_CLICKED, NULL);
-  lv_obj_add_event_cb(button5, btn5_event_handler, LV_EVENT_CLICKED, NULL);
 
   while(1) {
     // 4. 每 5ms~30ms 调用一次处理函数
