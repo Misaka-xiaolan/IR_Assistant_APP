@@ -8,6 +8,10 @@ file(GLOB_RECURSE User_APP_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/Src/*.c
 )
 
+list(APPEND User_APP_Src
+    ${CMAKE_CURRENT_SOURCE_DIR}/Src/freertos_debug.c
+)
+
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     ${User_APP_Src}
 )

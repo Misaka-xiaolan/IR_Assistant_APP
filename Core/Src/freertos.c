@@ -25,6 +25,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "freertos_debug.h"
 #include "bsp_key.h"
 #include "bsp_dht20.h"
 #include "bsp_buzzer.h"
@@ -72,7 +73,7 @@ extern DMA_HandleTypeDef hdma_tim2_ch3_up;
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
-  .stack_size = 128 * 4,
+  .stack_size = 768,
   .priority = (osPriority_t) osPriorityNormal,
 };
 
@@ -82,7 +83,7 @@ osThreadId_t lvglTaskHandle;
 const osThreadAttr_t lvglTask_attributes = {
   .name = "lvglTask",
   .stack_size = 4096,
-  .priority = (osPriority_t) 4,
+  .priority = (osPriority_t) 12,
 };
 void lvgl_main_task(void *pvParameters);
 /* USER CODE END FunctionPrototypes */
@@ -193,6 +194,7 @@ void MX_FREERTOS_Init(void) {
   // Storage_Format(storage_handle);
 
   lvglTaskHandle = osThreadNew(lvgl_main_task, NULL, &lvglTask_attributes);
+  FreertosDebug_Init();
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */

@@ -56,7 +56,7 @@ Key_Handle Key_Init(key_config_t* config)
     if (dev->config.long_press_time_ms == 0) dev->config.long_press_time_ms = 500;
 
     // 创建按键任务
-    if (xTaskCreate(Key_Task, "Key_Task", 128 * 8, dev, 28, &dev->key_task) != pdPASS)
+    if (xTaskCreate(Key_Task, "Key_Task", 512, dev, 15, &dev->key_task) != pdPASS)
     {
         vPortFree(dev);
         elog_error(TAG, "Key task create FAIL");

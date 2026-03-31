@@ -159,7 +159,14 @@ static bool Verify_Key_Data(const void* data)
 static storage_status_t Write_With_Backup(uint32_t sector_a, uint32_t sector_b,
                                           const void* data, size_t size)
 {
-    static uint8_t verify_buf[SECTOR_SIZE > KEY_DATA_SIZE ? SECTOR_SIZE : KEY_DATA_SIZE] = {0};
+    // static uint8_t verify_buf[SECTOR_SIZE > KEY_DATA_SIZE ? SECTOR_SIZE : KEY_DATA_SIZE] = {0};
+    // memset(verify_buf, 0, SECTOR_SIZE > KEY_DATA_SIZE ? SECTOR_SIZE : KEY_DATA_SIZE);
+    uint8_t* verify_buf = pvPortMalloc(SECTOR_SIZE > KEY_DATA_SIZE ? SECTOR_SIZE : KEY_DATA_SIZE);
+    if (verify_buf == NULL)
+    {
+        elog_error(TAG, "Failed to allocate memory for verify buffer");
+        return STORAGE_ERROR;
+    }
     memset(verify_buf, 0, SECTOR_SIZE > KEY_DATA_SIZE ? SECTOR_SIZE : KEY_DATA_SIZE);
 
     elog_debug(TAG, "Writing data to flash with backup (sector A: %d, sector B: %d, size: %d)", 
@@ -174,6 +181,7 @@ static storage_status_t Write_With_Backup(uint32_t sector_a, uint32_t sector_b,
     if (memcmp(data, verify_buf, size) != 0)
     {
         elog_error(TAG, "Primary sector %d verification failed", sector_a);
+        vPortFree(verify_buf);
         return STORAGE_ERROR_WRITE;
     }
     elog_verbose(TAG, "Primary sector %d verification passed", sector_a);
@@ -187,11 +195,13 @@ static storage_status_t Write_With_Backup(uint32_t sector_a, uint32_t sector_b,
     if (memcmp(data, verify_buf, size) != 0)
     {
         elog_error(TAG, "Backup sector %d verification failed", sector_b);
+        vPortFree(verify_buf);
         return STORAGE_ERROR_WRITE;
     }
     elog_verbose(TAG, "Backup sector %d verification passed", sector_b);
 
     elog_info(TAG, "Data written to sectors %d and %d successfully", sector_a, sector_b);
+    vPortFree(verify_buf);
     return STORAGE_OK;
 }
 
@@ -208,7 +218,14 @@ static storage_status_t Read_With_Recovery(uint32_t sector_a, uint32_t sector_b,
                                            void* data, size_t size,
                                            bool (*verify_func)(const void*))
 {
-    static uint8_t backup_buf[SECTOR_SIZE > KEY_DATA_SIZE ? SECTOR_SIZE : KEY_DATA_SIZE] = {0};
+    // static uint8_t backup_buf[SECTOR_SIZE > KEY_DATA_SIZE ? SECTOR_SIZE : KEY_DATA_SIZE] = {0};
+    // memset(backup_buf, 0, SECTOR_SIZE > KEY_DATA_SIZE ? SECTOR_SIZE : KEY_DATA_SIZE);
+    uint8_t* backup_buf = pvPortMalloc(SECTOR_SIZE > KEY_DATA_SIZE ? SECTOR_SIZE : KEY_DATA_SIZE);
+    if (backup_buf == NULL)
+    {
+        elog_error(TAG, "Failed to allocate memory for verify buffer");
+        return STORAGE_ERROR;
+    }
     memset(backup_buf, 0, SECTOR_SIZE > KEY_DATA_SIZE ? SECTOR_SIZE : KEY_DATA_SIZE);
 
     elog_debug(TAG, "Reading data from flash with recovery (sector A: %d, sector B: %d, size: %d)", 
@@ -229,6 +246,7 @@ static storage_status_t Read_With_Recovery(uint32_t sector_a, uint32_t sector_b,
         {
             elog_verbose(TAG, "No verification function provided for sector %d", sector_a);
         }
+        vPortFree(backup_buf);
         return STORAGE_OK;
     }
 
@@ -246,11 +264,13 @@ static storage_status_t Read_With_Recovery(uint32_t sector_a, uint32_t sector_b,
         memcpy(data, backup_buf, size);
         Norflash_Write((uint8_t*)data, SECTOR_TO_ADDR(sector_a), size);
         elog_info(TAG, "Data recovered from backup sector %d to primary sector %d", sector_b, sector_a);
+        vPortFree(backup_buf);
         return STORAGE_OK;
     }
 
     /* 主存储和备份存储都损坏 */
     elog_error(TAG, "Both primary sector %d and backup sector %d are corrupted", sector_a, sector_b);
+    vPortFree(backup_buf);
     return STORAGE_ERROR_CHECKSUM;
 }
 
