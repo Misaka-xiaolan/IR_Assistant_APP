@@ -32,7 +32,6 @@
 #include "bsp_norflash.h"
 #include "bsp_key.h"
 #include "bsp_ir.h"
-#include "lvgl.h"
 
 /* USER CODE END Includes */
 
@@ -134,7 +133,6 @@ int main(void)
   elog_start();
   // test_log();
   elog_set_filter_lvl(ELOG_LVL_DEBUG);
-  lv_tick_set_cb(xTaskGetTickCount);
   /* USER CODE END 2 */
 
   /* Init scheduler */

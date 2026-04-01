@@ -34,13 +34,8 @@
 #include "bsp_uart.h"
 #include "i2c.h"
 #include "tim.h"
-#include "lvgl.h"
-#include "lv_port_indev.h"
-#include "lv_port_lcd_stm32.h"
-#include "lv_port_other.h"
 #include "usart.h"
 #include "ir_storage.h"
-#include "src/misc/lv_event_private.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -103,7 +98,6 @@ void vApplicationTickHook( void )
    added here, but the tick hook is called from an interrupt context, so
    code must not attempt to block, and only the interrupt safe FreeRTOS API
    functions can be used (those that end in FromISR()). */
-  lv_tick_inc(1); // 每 1ms 触发一次
 }
 /* USER CODE END 3 */
 
@@ -192,15 +186,12 @@ void MX_FREERTOS_Init(void) {
 
   storage_handle = Storage_Init();
   // Storage_Format(storage_handle);
-
-  lvglTaskHandle = osThreadNew(lvgl_main_task, NULL, &lvglTask_attributes);
   FreertosDebug_Init();
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
   /* add events, ... */
   /* USER CODE END RTOS_EVENTS */
-
 }
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -223,155 +214,7 @@ void StartDefaultTask(void *argument)
 }
 
 /* Private application code --------------------------------------------------*/
-/* USER CODE BEGIN Application */
-// static void btn2_event_handler(lv_event_t* e)
-// {
-//   ir_event_t ir_event = {0};
-//   lv_event_code_t code = lv_event_get_code(e);
-//   uint16_t key_id;
-//   if (code == LV_EVENT_CLICKED)
-//   {
-//     xQueueReceive(e->user_data, &ir_event, 0);
-//     if (ir_event.len == 0)
-//     {
-//       Buzzer_Beep(buzzer_handle, 50, 262);
-//       elog_info(TAG, "No IR data");
-//     }
-//     else
-//     {
-//       IR_Receive_Stop(ir_handle);
-//       Storage_AddKey(storage_handle, 1, "ir_data", ir_event.data, ir_event.len, &key_id);
-//       Buzzer_Beep(buzzer_handle, 50, 392);
-//       IR_Event_Unsubscribe(ir_handle, e->user_data);
-//     }
-//     // 在此处添加你的业务逻辑，如跳转页面、开关功能等
-//   }
-// }
-//
-// static void btn3_event_handler(lv_event_t* e)
-// {
-//   static uint8_t id = 0;
-//   uint16_t remote_id;
-//   char name[10];
-//   lv_event_code_t code = lv_event_get_code(e);
-//   if (code == LV_EVENT_CLICKED)
-//   {
-//     sprintf(name, "remote%d", id);
-//     Storage_AddRemote(storage_handle, name, &remote_id);
-//     elog_info(TAG, "add remote id = %d, name = %s", remote_id, name);
-//   }
-// }
-//
-// static void btn1_event_handler(lv_event_t* e)
-// {
-//   remote_info_t list[10];
-//   uint16_t count;
-//   lv_event_code_t code = lv_event_get_code(e);
-//   if (code == LV_EVENT_CLICKED)
-//   {
-//     Storage_GetRemoteList(storage_handle, list, 10, &count);
-//     printf("total count = %d\r\n",  count);
-//     for (int i = 0; i < count; ++i)
-//     {
-//       printf("list id: %d, name: %s, count: %d\r\n", list[i].id, list[i].name, list[i].key_count);
-//     }
-//   }
-// }
-//
-// static void btn4_event_handler(lv_event_t* e)
-// {
-//   key_info_t list[10];
-//   uint16_t count;
-//   lv_event_code_t code = lv_event_get_code(e);
-//   if (code == LV_EVENT_CLICKED)
-//   {
-//     // Storage_GetRemoteList(storage_handle, list, 10, &count);
-//     // Storage_DeleteRemote(storage_handle, count);
-//     Storage_GetKeyList(storage_handle, 1, list, 10, &count);
-//     Storage_DeleteKey(storage_handle, 1, list[count - 1].id);
-//   }
-// }
-//
-// static void btn5_event_handler(lv_event_t* e)
-// {
-//   key_info_t list[10];
-//   uint16_t count;
-//   lv_event_code_t code = lv_event_get_code(e);
-//   if (code == LV_EVENT_CLICKED)
-//   {
-//     Storage_GetKeyList(storage_handle, 1, list, 10, &count);
-//     if (count > 0)
-//     {
-//       key_data_t* temp_data = pvPortMalloc(sizeof(key_data_t));
-//       Storage_GetKeyData(storage_handle, 1, list[count - 1].id, temp_data);
-//       IR_Send(ir_handle, temp_data->data, temp_data->data_len);
-//       vPortFree(temp_data);
-//     }
-//   }
-// }
-
-void lvgl_main_task(void *pvParameters)
-{
-  extern lv_indev_t * indev_keypad;
-  // 1. LVGL 核心初始化
-  lv_init();
-  lv_delay_set_cb(lv_port_delay_cb);
-  // 2. 初始化显示驱动 (你需要根据你的屏幕驱动芯片实现 flush_cb)
-  lv_port_display_init();
-  lv_port_indev_init();
-
-  lv_obj_t * btn1 = lv_btn_create(lv_screen_active());
-  lv_obj_t * btn2 = lv_btn_create(lv_screen_active());
-  lv_obj_t * btn3 = lv_btn_create(lv_screen_active());
-  lv_obj_t * btn4 = lv_btn_create(lv_screen_active());
-
-  lv_obj_set_width(btn1, lv_pct(30)); // 宽度占满父容器，或者设为固定值
-  lv_obj_set_width(btn2, lv_pct(30)); // 宽度占满父容器，或者设为固定值
-  lv_obj_set_width(btn3, lv_pct(30)); // 宽度占满父容器，或者设为固定值
-  lv_obj_set_width(btn4, lv_pct(30)); // 宽度占满父容器，或者设为固定值
-
-  lv_obj_set_x(btn1, 50);
-  lv_obj_set_y(btn1, 10);
-
-  lv_obj_set_x(btn2, 50);
-  lv_obj_set_y(btn2, 60);
-
-  lv_obj_set_x(btn3, 160);
-  lv_obj_set_y(btn3, 10);
-
-  lv_obj_set_x(btn4, 160);
-  lv_obj_set_y(btn4, 60);
-
-  lv_obj_t * label = lv_label_create(btn1);
-  lv_label_set_text(label, "Remote 1");
-  lv_obj_center(label); // 文字居中
-  label = lv_label_create(btn2);
-  lv_label_set_text(label, "Remote 2");
-  lv_obj_center(label); // 文字居中
-  label = lv_label_create(btn3);
-  lv_label_set_text(label, "Remote 3");
-  lv_obj_center(label); // 文字居中
-  label = lv_label_create(btn4);
-  lv_label_set_text(label, "Remote 4");
-  lv_obj_center(label); // 文字居中
-
-  lv_group_t *my_group = lv_group_create();
-  lv_group_add_obj(my_group, btn1);
-  lv_group_add_obj(my_group, btn2);
-  lv_group_add_obj(my_group, btn3);
-  lv_group_add_obj(my_group, btn4);
-  lv_indev_set_group(indev_keypad, my_group);
-
-  QueueHandle_t ir_queue = IR_Event_Subscribe(ir_handle);
 
 
-  while(1) {
-    // 4. 每 5ms~30ms 调用一次处理函数
-      lv_lock();
-      lv_timer_handler();
-      lv_unlock();
-    vTaskDelay(pdMS_TO_TICKS(3));
-  }
-}
 /* USER CODE END Application */
 

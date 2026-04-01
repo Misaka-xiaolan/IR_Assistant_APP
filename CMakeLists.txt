@@ -78,7 +78,6 @@ endif()
 # Add linked libraries
 target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
-        lvgl
     # Add user defined libraries
 )
 
